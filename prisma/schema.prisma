@@ -3,12 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// NOTE: Production target is PostgreSQL. Switch provider to "postgresql" and set DATABASE_URL to postgres connection string.
-// All fields are Postgres-compatible (no SQLite-only). Mirrors Phase 0 ER diagram.
+// Production database is PostgreSQL (Neon). Local dev connects to the same Neon project via DATABASE_URL.
 
 enum UserRole {
   OWNER

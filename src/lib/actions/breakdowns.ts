@@ -21,6 +21,16 @@ export async function createBreakdown(prevState: unknown, formData: FormData) {
   const d = parsed.data;
   const machine = await prisma.machine.findUnique({ where: { id: d.machineId } });
   if (!machine) return { error: "Machine not found" };
+
+  // Operators may only report issues for machines they are actively assigned to.
+  if (user.role === "OPERATOR") {
+    const assigned = await prisma.assignment.findFirst({
+      where: { operatorId: userId, machineId: d.machineId, status: "ACTIVE" },
+      select: { id: true },
+    });
+    if (!assigned) return { error: "You can only report issues for your assigned machine." };
+  }
+
   await prisma.breakdownReport.create({
     data: {
       machineId: d.machineId,
@@ -33,8 +43,10 @@ export async function createBreakdown(prevState: unknown, formData: FormData) {
       status: "OPEN",
     }
   });
-  // Optionally set machine to BROKEN_DOWN if CRITICAL/HIGH
-  if (d.severity === "CRITICAL" || d.severity === "HIGH") {
+  // Flag the machine BROKEN_DOWN on severe reports — but never overwrite
+  // maintenance/retired states.
+  const flagWorthy = machine.status === "ACTIVE" || machine.status === "WORKING" || machine.status === "IDLE";
+  if ((d.severity === "CRITICAL" || d.severity === "HIGH") && flagWorthy) {
     await prisma.machine.update({ where: { id: d.machineId }, data: { status: "BROKEN_DOWN" } });
   }
   revalidatePath("/admin/breakdowns");
@@ -62,7 +74,17 @@ export async function updateBreakdown(id: string, prevState: unknown, formData: 
   if (d.status === "RESOLVED") data.resolvedAt = new Date();
   await prisma.breakdownReport.update({ where: { id }, data: data as never });
   if (d.status === "RESOLVED") {
-    await prisma.machine.update({ where: { id: report.machineId }, data: { status: "IDLE" } });
+    // Safety-aware transition: only return the machine to IDLE when this was
+    // the last unresolved incident and no work session is running.
+    const [openIncidents, activeSession, current] = await Promise.all([
+      prisma.breakdownReport.count({ where: { machineId: report.machineId, id: { not: id }, status: { not: "RESOLVED" } } }),
+      prisma.workSession.findFirst({ where: { machineId: report.machineId, status: "ACTIVE" }, select: { id: true } }),
+      prisma.machine.findUnique({ where: { id: report.machineId }, select: { status: true } }),
+    ]);
+    const canIdle = openIncidents === 0 && !activeSession && current?.status === "BROKEN_DOWN";
+    if (canIdle) {
+      await prisma.machine.update({ where: { id: report.machineId }, data: { status: "IDLE" } });
+    }
   }
   revalidatePath("/admin/breakdowns");
   return { success: true };

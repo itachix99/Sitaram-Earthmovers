@@ -1,8 +1,13 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { getActionUser } from "@/lib/auth-guards";
+import { Prisma } from "@prisma/client";
 import { startWorkSchema, endWorkSchema } from "@/lib/validations/work-session";
 import { revalidatePath } from "next/cache";
+
+function isUniqueViolation(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+}
 
 export async function startWork(prevState: unknown, formData: FormData) {
   const user = await getActionUser();
@@ -38,32 +43,52 @@ export async function startWork(prevState: unknown, formData: FormData) {
     return { error: `Opening meter (${openingHourMeter}) cannot be less than current meter (${machine.currentHourMeter})` };
   }
 
-  // Validate assignment exists (optional but recommended)
-  if (jobSiteId) {
-    const assign = await prisma.assignment.findFirst({ where: { machineId, operatorId: userId, jobSiteId, status: "ACTIVE" } });
-    if (!assign) {
-      // allow but warn — not blocking for flexibility
+  // Assignment enforcement: operators may only start work on machines they
+  // are actively assigned to; the assignment's site is the source of truth.
+  let effectiveJobSiteId: string | null = jobSiteId || null;
+  if (user.role === "OPERATOR") {
+    const assignment = await prisma.assignment.findFirst({
+      where: { operatorId: userId, machineId, status: "ACTIVE" },
+      include: { jobSite: true },
+    });
+    if (!assignment) {
+      return { error: "You are not actively assigned to this machine. Ask your admin for an assignment." };
     }
+    effectiveJobSiteId = assignment.jobSiteId;
   }
 
-  const created = await prisma.workSession.create({
-    data: {
-      machineId,
-      operatorId: userId,
-      jobSiteId: jobSiteId || null,
-      openingHourMeter,
-      notes: notes || null,
-      startPhotoUrl: parsed.data.startPhotoUrl || null,
-      status: "ACTIVE",
+  try {
+    const created = await prisma.$transaction(async (tx) => {
+      // Re-check duplicates inside the transaction; the DB-level partial unique
+      // indexes (one ACTIVE session per machine / per operator) are the backstop.
+      const activeByOperator = await tx.workSession.findFirst({ where: { operatorId: userId, status: "ACTIVE" }, select: { id: true } });
+      if (activeByOperator) throw new Error("You already have an active session. End it before starting a new one.");
+      const activeByMachine = await tx.workSession.findFirst({ where: { machineId, status: "ACTIVE" }, select: { id: true } });
+      if (activeByMachine) throw new Error("Machine already has an active session by another operator.");
+
+      await tx.machine.update({ where: { id: machineId }, data: { status: "WORKING" } });
+
+      return tx.workSession.create({
+        data: {
+          machineId,
+          operatorId: userId,
+          jobSiteId: effectiveJobSiteId,
+          openingHourMeter,
+          notes: notes || null,
+          startPhotoUrl: parsed.data.startPhotoUrl || null,
+          status: "ACTIVE",
+        },
+      });
+    });
+    revalidatePath("/operator/today");
+    revalidatePath(`/admin/machines/${machineId}`);
+    return { success: true, sessionId: created.id };
+  } catch (e: unknown) {
+    if (isUniqueViolation(e)) {
+      return { error: "Machine already has an active session by another operator." };
     }
-  });
-  // Update machine status to WORKING if not already
-  if (machine.status !== "WORKING") {
-    await prisma.machine.update({ where: { id: machineId }, data: { status: "WORKING" } });
+    return { error: e instanceof Error ? e.message : "Could not start work" };
   }
-  revalidatePath("/operator/today");
-  revalidatePath(`/admin/machines/${machineId}`);
-  return { success: true, sessionId: created.id };
 }
 
 export async function endWork(prevState: unknown, formData: FormData) {
@@ -108,8 +133,14 @@ export async function endWork(prevState: unknown, formData: FormData) {
         status: "COMPLETED",
       }
     });
-    // Update machine currentHourMeter to closing
-    await tx.machine.update({ where: { id: work.machineId }, data: { currentHourMeter: closingHourMeter, status: "IDLE" } });
+    // Update machine currentHourMeter to closing. Safety-aware: never clear
+    // breakdown/maintenance state just because a session ended.
+    const current = await tx.machine.findUnique({ where: { id: work.machineId }, select: { status: true } });
+    const preserved = current?.status === "BROKEN_DOWN" || current?.status === "UNDER_MAINTENANCE";
+    await tx.machine.update({
+      where: { id: work.machineId },
+      data: { currentHourMeter: closingHourMeter, ...(preserved ? {} : { status: "IDLE" }) },
+    });
   });
 
   revalidatePath("/operator/today");

@@ -7,7 +7,10 @@ import { ReportForm } from "@/components/breakdowns/report-form";
 export default async function ReportPage({ searchParams }: { searchParams: Promise<{ machineId?: string }> }) {
   const user = await requireActiveUser();
   const { machineId } = await searchParams;
-  const machines = await prisma.machine.findMany({ where: { status: { not: "RETIRED" } }, select: { id: true, name: true, registrationNumber: true }, orderBy: { name: "asc" } });
+  const isPrivileged = user.role !== "OPERATOR";
+  const machines = isPrivileged
+    ? await prisma.machine.findMany({ where: { status: { not: "RETIRED" } }, select: { id: true, name: true, registrationNumber: true }, orderBy: { name: "asc" } })
+    : (await prisma.assignment.findMany({ where: { operatorId: user.id, status: "ACTIVE" }, include: { machine: { select: { id: true, name: true, registrationNumber: true } } }, orderBy: { assignedAt: "desc" } })).map((a) => a.machine);
   const assignment = await prisma.assignment.findFirst({ where: { operatorId: user.id, status: "ACTIVE" }, include: { machine: true } });
   const defaultMachineId = machineId ?? assignment?.machineId ?? "";
   const recent = await prisma.breakdownReport.findMany({ where: { operatorId: user.id }, orderBy: { reportedAt: "desc" }, take: 5, include: { machine: true } });

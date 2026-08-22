@@ -8,7 +8,10 @@ export default async function FuelPage() {
   const user = await requireActiveUser();
   const userId = user.id;
   const assignment = await prisma.assignment.findFirst({ where: { operatorId: userId, status: "ACTIVE" }, include: { machine: true, jobSite: true } });
-  const machines = await prisma.machine.findMany({ where: { status: { not: "RETIRED" } }, select: { id: true, name: true, registrationNumber: true }, orderBy: { name: "asc" } });
+  const isPrivileged = user.role !== "OPERATOR";
+  const machines = isPrivileged
+    ? await prisma.machine.findMany({ where: { status: { not: "RETIRED" } }, select: { id: true, name: true, registrationNumber: true }, orderBy: { name: "asc" } })
+    : (await prisma.assignment.findMany({ where: { operatorId: userId, status: "ACTIVE" }, include: { machine: { select: { id: true, name: true, registrationNumber: true } } }, orderBy: { assignedAt: "desc" } })).map((a) => a.machine);
   const jobSites = await prisma.jobSite.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
   const recent = await prisma.fuelLog.findMany({ where: { operatorId: userId }, orderBy: { date: "desc" }, take: 5, include: { machine: true } });
 

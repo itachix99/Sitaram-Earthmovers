@@ -45,7 +45,7 @@ export default async function OperatorTodayPage() {
       </div>
 
       {!assignment && !activeSession ? (
-        <Card><CardContent className="p-6 text-center"><p className="font-semibold">No active assignment</p><p className="text-sm text-muted-foreground mt-1">Contact admin to assign a machine & site. You cannot start work without assignment (demo allows but assignment form shows site).</p></CardContent></Card>
+        <Card><CardContent className="p-6 text-center"><p className="font-semibold">No active assignment</p><p className="text-sm text-muted-foreground mt-1">Contact your admin to get a machine &amp; site assigned. Work cannot start without an active assignment.</p></CardContent></Card>
       ) : (
         <Card className="overflow-hidden border-[var(--charcoal)]/10">
           <div className="bg-[var(--charcoal)] px-4 py-3 text-white flex justify-between items-center">

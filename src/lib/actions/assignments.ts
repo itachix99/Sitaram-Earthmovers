@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { getActionAdmin } from "@/lib/auth-guards";
 import { assignmentSchema } from "@/lib/validations/project";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 export async function createAssignment(prevState: unknown, formData: FormData) {
@@ -26,16 +27,28 @@ export async function createAssignment(prevState: unknown, formData: FormData) {
   if (!operator) return { error: "Operator not found" };
   if (!site) return { error: "Site not found" };
   if (operator.role !== "OPERATOR") return { error: "User is not an operator" };
+  if (operator.status !== "ACTIVE") return { error: "Operator is not active" };
+  if (machine.status === "RETIRED") return { error: "Machine is retired" };
 
-  // End previous active assignment for this machine (preserve history)
-  const active = await prisma.assignment.findFirst({ where: { machineId, status: "ACTIVE" } });
-  if (active) {
-    await prisma.assignment.update({ where: { id: active.id }, data: { status: "COMPLETED", endedAt: new Date() } });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // End previous active assignment for this machine (preserve history).
+      const active = await tx.assignment.findFirst({ where: { machineId, status: "ACTIVE" }, select: { id: true } });
+      if (active) {
+        await tx.assignment.update({ where: { id: active.id }, data: { status: "COMPLETED", endedAt: new Date() } });
+      }
+      // The partial unique index on ACTIVE assignments per machine is the
+      // concurrency backstop for two admins assigning simultaneously.
+      await tx.assignment.create({
+        data: { machineId, operatorId, jobSiteId, status: "ACTIVE" }
+      });
+    });
+  } catch (e: unknown) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { error: "Machine was just assigned by someone else. Refresh and retry." };
+    }
+    throw e;
   }
-
-  await prisma.assignment.create({
-    data: { machineId, operatorId, jobSiteId, status: "ACTIVE" }
-  });
   revalidatePath(`/admin/projects/${jobSiteId}`);
   revalidatePath(`/admin/machines/${machineId}`);
   revalidatePath(`/admin/operators`);

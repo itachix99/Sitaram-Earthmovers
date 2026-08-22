@@ -30,6 +30,15 @@ export async function createFuelLog(prevState: unknown, formData: FormData) {
   const machine = await prisma.machine.findUnique({ where: { id: machineId } });
   if (!machine) return { error: "Machine not found" };
 
+  // Operators may only log fuel for machines they are actively assigned to.
+  if (user.role === "OPERATOR") {
+    const assigned = await prisma.assignment.findFirst({
+      where: { operatorId: user.id, machineId, status: "ACTIVE" },
+      select: { id: true },
+    });
+    if (!assigned) return { error: "You can only log fuel for your assigned machine." };
+  }
+
   // Validate meterReading not less than current if provided? Allow but warn
   if (meterReading !== undefined && meterReading < 0) return { error: "Meter reading must be ≥ 0" };
 

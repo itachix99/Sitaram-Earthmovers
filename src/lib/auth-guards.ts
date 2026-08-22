@@ -86,9 +86,7 @@ export async function getActionAdmin(): Promise<AuthUser | null> {
 
 /**
  * Assignment scope helper: does this operator have an ACTIVE assignment for
- * the given machine (and optionally job site)? Phase 2 wires this into
- * submission actions; exposed here so pages/actions share one definition of
- * "assigned".
+ * the given machine (and optionally job site)?
  */
 export async function hasActiveAssignment(
   userId: string,
@@ -105,4 +103,16 @@ export async function hasActiveAssignment(
     select: { id: true },
   });
   return assignment !== null;
+}
+
+/**
+ * All ACTIVE assignments (with machine + job site) for a user, newest first.
+ * Used to scope operator UI lists and submission checks to assigned resources.
+ */
+export async function getActiveAssignments(userId: string) {
+  return prisma.assignment.findMany({
+    where: { operatorId: userId, status: "ACTIVE" },
+    include: { machine: true, jobSite: true },
+    orderBy: { assignedAt: "desc" },
+  });
 }

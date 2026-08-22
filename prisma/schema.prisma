@@ -195,6 +195,9 @@ model JobSite {
 }
 
 model Assignment {
+  /// DB-level guard: partial unique index `assignment_one_active_per_machine`
+  /// ensures at most one ACTIVE assignment per machine (see migration
+  /// 20260822075708_fleet_rules_indexes).
   id         String           @id @default(cuid())
   machineId  String
   operatorId String
@@ -212,6 +215,10 @@ model Assignment {
 }
 
 model WorkSession {
+  /// DB-level guards: partial unique indexes `work_session_one_active_per_machine`
+  /// and `work_session_one_active_per_operator` ensure at most one ACTIVE
+  /// session per machine and per operator (see migration
+  /// 20260822075708_fleet_rules_indexes).
   id                 String            @id @default(cuid())
   machineId          String
   operatorId         String

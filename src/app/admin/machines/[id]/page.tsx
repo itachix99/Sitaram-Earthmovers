@@ -6,8 +6,10 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ArrowLeft, Fuel, Wrench, Clock3, MapPin, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { archiveMachine } from "@/lib/actions/machines";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function MachineDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const m = await prisma.machine.findUnique({ where: { id } });
   if (!m) notFound();

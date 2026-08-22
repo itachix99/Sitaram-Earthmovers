@@ -6,8 +6,10 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function OperatorsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  await requireAdmin();
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
   const operators = await prisma.operator.findMany({

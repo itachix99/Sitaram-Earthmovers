@@ -1,6 +1,15 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
+/**
+ * Optimistic routing layer (Next.js Proxy — replaces deprecated middleware.ts).
+ *
+ * NOTE: This is a redirect optimization only, NOT the authorization boundary.
+ * Real authorization happens server-side: every admin/operator page and every
+ * mutating server action re-checks role + ACTIVE status against the database
+ * via src/lib/auth-guards.ts. A stale or forged JWT may pass this proxy but
+ * will never pass the database-backed guards.
+ */
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const role = (req.auth?.user as { role?: string } | undefined)?.role;

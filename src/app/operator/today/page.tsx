@@ -1,6 +1,5 @@
-import { auth } from "@/auth";
+import { requireActiveUser } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -11,9 +10,8 @@ import { EndWorkForm } from "@/components/operator/end-work-form";
 import { PhotoButton } from "@/components/operator/photo-button";
 
 export default async function OperatorTodayPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  const userId = (session.user as unknown as { id: string }).id;
+  const user = await requireActiveUser();
+  const userId = user.id;
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
 
@@ -43,7 +41,7 @@ export default async function OperatorTodayPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold tracking-tight">Today&apos;s Assignment</h1>
-        <p className="text-sm text-muted-foreground">{dateStr} • {session.user.name} • {(session.user as unknown as { role: string }).role}</p>
+        <p className="text-sm text-muted-foreground">{dateStr} • {user.name} • {user.role}</p>
       </div>
 
       {!assignment && !activeSession ? (
@@ -57,7 +55,7 @@ export default async function OperatorTodayPage() {
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm"><MapPin className="h-4 w-4 text-muted-foreground" /> {site ? `${site.name} • ${site.address ?? "—"}` : "No site"}</div>
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Current Meter</span><span className="font-mono font-bold">{machine ? `${machine.currentHourMeter.toFixed(1)} h` : "—"}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Operator</span><span className="font-semibold">{session.user.name}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Operator</span><span className="font-semibold">{user.name}</span></div>
           </CardContent>
         </Card>
       )}

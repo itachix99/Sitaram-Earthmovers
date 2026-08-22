@@ -6,8 +6,10 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { ArrowLeft, Pencil, Power } from "lucide-react";
 import { toggleOperatorStatus } from "@/lib/actions/operators";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function OperatorDetail({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const op = await prisma.operator.findUnique({ where: { id }, include: { user: true } });
   if (!op) notFound();

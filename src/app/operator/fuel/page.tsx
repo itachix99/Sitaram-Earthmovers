@@ -1,14 +1,12 @@
-import { auth } from "@/auth";
+import { requireActiveUser } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fuel } from "lucide-react";
 import { FuelForm } from "@/components/fuel/fuel-form";
 
 export default async function FuelPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  const userId = (session.user as unknown as { id: string }).id;
+  const user = await requireActiveUser();
+  const userId = user.id;
   const assignment = await prisma.assignment.findFirst({ where: { operatorId: userId, status: "ACTIVE" }, include: { machine: true, jobSite: true } });
   const machines = await prisma.machine.findMany({ where: { status: { not: "RETIRED" } }, select: { id: true, name: true, registrationNumber: true }, orderBy: { name: "asc" } });
   const jobSites = await prisma.jobSite.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });

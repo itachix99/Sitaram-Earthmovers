@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth-guards";
 import ExcelJS from "exceljs";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -176,9 +176,8 @@ async function getReportData(type: string, machineId: string | null, operatorId:
 }
 
 export async function GET(req: Request) {
-  const session = await auth();
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!session?.user || (role !== "OWNER" && role !== "ADMIN")) {
+  const user = await getSessionUser();
+  if (!user || (user.role !== "OWNER" && user.role !== "ADMIN")) {
     return new Response("Unauthorized", { status: 401 });
   }
 

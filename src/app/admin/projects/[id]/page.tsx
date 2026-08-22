@@ -7,8 +7,10 @@ import Link from "next/link";
 import { ArrowLeft, Pencil, Clock } from "lucide-react";
 import { AssignmentForm } from "@/components/projects/assignment-form";
 import { endAssignment } from "@/lib/actions/assignments";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function ProjectDetail({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const site = await prisma.jobSite.findUnique({ where: { id } });
   if (!site) notFound();

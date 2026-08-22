@@ -1,20 +1,14 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionAdmin } from "@/lib/auth-guards";
 import { operatorCreateSchema, operatorUpdateSchema } from "@/lib/validations/operator";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!session?.user) throw new Error("UNAUTHORIZED");
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("FORBIDDEN");
-}
-
 export async function createOperator(prevState: unknown, formData: FormData) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized — OWNER/ADMIN only" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized — OWNER/ADMIN only" };
   const raw: Record<string, unknown> = {};
   for (const [k,v] of formData.entries()) raw[k]=v;
   if (raw.salaryAmount === "") delete raw.salaryAmount;
@@ -56,7 +50,8 @@ export async function createOperator(prevState: unknown, formData: FormData) {
 }
 
 export async function updateOperator(id: string, prevState: unknown, formData: FormData) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   const raw: Record<string, unknown> = {};
   for (const [k,v] of formData.entries()) raw[k]=v;
   if (raw.salaryAmount === "") delete raw.salaryAmount;
@@ -95,7 +90,8 @@ export async function updateOperator(id: string, prevState: unknown, formData: F
 }
 
 export async function toggleOperatorStatus(id: string) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   const op = await prisma.operator.findUnique({ where: { id }, include: { user: true } });
   if (!op) return { error: "Not found" };
   const newStatus = op.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";

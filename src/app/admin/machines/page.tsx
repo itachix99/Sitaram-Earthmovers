@@ -6,8 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Search, Plus, Filter } from "lucide-react";
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function MachinesPage({ searchParams }: { searchParams: Promise<{ q?: string; type?: string; status?: string }> }) {
+  await requireAdmin();
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const type = params.type ?? "";

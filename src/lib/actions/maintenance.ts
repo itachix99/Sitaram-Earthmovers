@@ -1,18 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionAdmin } from "@/lib/auth-guards";
 import { maintenanceSchema } from "@/lib/validations/maintenance";
 import { revalidatePath } from "next/cache";
 
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!session?.user) throw new Error("UNAUTHORIZED");
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("FORBIDDEN");
-}
-
 export async function createMaintenance(prevState: unknown, formData: FormData) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized — OWNER/ADMIN only" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized — OWNER/ADMIN only" };
   const raw: Record<string, unknown> = {
     machineId: formData.get("machineId") as string,
     serviceType: (formData.get("serviceType") as string) || "SCHEDULED",

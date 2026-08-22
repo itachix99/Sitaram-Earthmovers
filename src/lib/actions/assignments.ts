@@ -1,18 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionAdmin } from "@/lib/auth-guards";
 import { assignmentSchema } from "@/lib/validations/project";
 import { revalidatePath } from "next/cache";
 
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!session?.user) throw new Error("UNAUTHORIZED");
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("FORBIDDEN");
-}
-
 export async function createAssignment(prevState: unknown, formData: FormData) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   const raw = {
     machineId: formData.get("machineId") as string,
     operatorId: formData.get("operatorId") as string,
@@ -49,7 +43,8 @@ export async function createAssignment(prevState: unknown, formData: FormData) {
 }
 
 export async function endAssignment(id: string) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   const a = await prisma.assignment.findUnique({ where: { id } });
   if (!a) return { error: "Assignment not found" };
   if (a.status === "COMPLETED") return { error: "Already completed" };

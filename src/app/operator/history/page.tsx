@@ -1,13 +1,11 @@
-import { auth } from "@/auth";
+import { requireActiveUser } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export default async function HistoryPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  const userId = (session.user as unknown as { id: string }).id;
+  const user = await requireActiveUser();
+  const userId = user.id;
   const sessions = await prisma.workSession.findMany({
     where: { operatorId: userId },
     include: { machine: true, jobSite: true },

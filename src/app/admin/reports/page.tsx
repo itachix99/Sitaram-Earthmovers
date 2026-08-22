@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { ExportButtons } from "./export-buttons";
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ const REPORTS = [
 ];
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ type?: string; machineId?: string; operatorId?: string; projectId?: string; start?: string; end?: string }> }) {
+  await requireAdmin();
   const params = await searchParams;
   const type = params.type ?? "fuel";
   const { machineId, operatorId, projectId, start, end } = params;

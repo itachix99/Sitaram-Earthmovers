@@ -4,8 +4,10 @@ import { ProjectForm } from "@/components/projects/project-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const site = await prisma.jobSite.findUnique({ where: { id } });
   if (!site) notFound();

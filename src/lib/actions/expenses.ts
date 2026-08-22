@@ -1,21 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionAdmin } from "@/lib/auth-guards";
 import { expenseSchema } from "@/lib/validations/expense";
 import { revalidatePath } from "next/cache";
 
-async function requireAdmin() {
-  const s = await auth();
-  const r = (s?.user as unknown as { role?: string })?.role;
-  if (!s?.user) throw new Error("UNAUTHORIZED");
-  if (r !== "OWNER" && r !== "ADMIN") throw new Error("FORBIDDEN");
-  return s;
-}
-
 export async function createExpense(prevState: unknown, formData: FormData) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let session: any;
-  try { session = await requireAdmin(); } catch { return { error: "Not authorized — OWNER/ADMIN only" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized — OWNER/ADMIN only" };
   const raw: Record<string, unknown> = {
     category: formData.get("category") as string,
     amount: formData.get("amount") as string,
@@ -37,7 +28,7 @@ export async function createExpense(prevState: unknown, formData: FormData) {
       jobSiteId: d.jobSiteId || null,
       description: d.description || null,
       date: d.date ? new Date(d.date as string) : new Date(),
-      createdById: (session?.user as unknown as { id: string }).id,
+      createdById: admin.id,
     }
   });
   revalidatePath("/admin/expenses");

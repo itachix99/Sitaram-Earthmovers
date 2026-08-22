@@ -1,10 +1,12 @@
 import { getNotifications, getActivityTimeline } from "@/lib/queries/notifications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
+  await requireAdmin();
   const [notifications, activity] = await Promise.all([getNotifications(), getActivityTimeline(20)]);
   const critical = notifications.filter(n=>n.severity==="critical");
   const high = notifications.filter(n=>n.severity==="high");

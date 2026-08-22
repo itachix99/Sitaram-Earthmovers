@@ -2,10 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ExpenseForm } from "@/components/expenses/expense-form";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  await requireAdmin();
   const { category } = await searchParams;
   const where: Record<string, unknown> = {};
   if (category) (where as Record<string, unknown>).category = category;

@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Search, Plus, MapPin } from "lucide-react";
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+  await requireAdmin();
   const { q, status } = await searchParams;
   const query = q?.trim() ?? "";
   const where: Record<string, unknown> = {};

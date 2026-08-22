@@ -1,13 +1,13 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionUser, getActionAdmin } from "@/lib/auth-guards";
 import { breakdownSchema, breakdownUpdateSchema } from "@/lib/validations/breakdown";
 import { revalidatePath } from "next/cache";
 
 export async function createBreakdown(prevState: unknown, formData: FormData) {
-  const session = await auth();
-  const userId = (session?.user as unknown as { id?: string })?.id;
-  if (!userId) return { error: "Not authenticated" };
+  const user = await getActionUser();
+  if (!user) return { error: "Not authenticated" };
+  const userId = user.id;
   const raw = {
     machineId: formData.get("machineId") as string,
     severity: (formData.get("severity") as string) || "MEDIUM",
@@ -43,10 +43,8 @@ export async function createBreakdown(prevState: unknown, formData: FormData) {
 }
 
 export async function updateBreakdown(id: string, prevState: unknown, formData: FormData) {
-  const session = await auth();
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!session?.user) return { error: "Not authenticated" };
-  if (role !== "OWNER" && role !== "ADMIN") return { error: "Not authorized — OWNER/ADMIN only" };
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized — OWNER/ADMIN only" };
   const raw = {
     status: formData.get("status") as string,
     resolutionNotes: (formData.get("resolutionNotes") as string) || "",

@@ -1,16 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionUser } from "@/lib/auth-guards";
 import { fuelSchema } from "@/lib/validations/fuel";
 import { revalidatePath } from "next/cache";
 
 export async function createFuelLog(prevState: unknown, formData: FormData) {
-  const session = await auth();
-  const userId = (session?.user as unknown as { id?: string })?.id;
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!userId) return { error: "Not authenticated" };
-  // Both operator and admin can log fuel, but operator is primary
-  if (!role) return { error: "Not authorized" };
+  const user = await getActionUser();
+  if (!user) return { error: "Not authenticated" };
 
   const raw: Record<string, unknown> = {
     machineId: formData.get("machineId") as string,
@@ -43,7 +39,7 @@ export async function createFuelLog(prevState: unknown, formData: FormData) {
   await prisma.fuelLog.create({
     data: {
       machineId,
-      operatorId: userId,
+      operatorId: user.id,
       jobSiteId: jobSiteId || null,
       litres,
       costPerLitre: costPerLitre ?? null,

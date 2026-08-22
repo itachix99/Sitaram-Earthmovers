@@ -2,10 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WeeklyHoursChart } from "@/components/dashboard/weekly-hours-chart";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
+  await requireAdmin();
   const machines = await prisma.machine.findMany({ orderBy: { name: "asc" } });
   const sites = await prisma.jobSite.findMany();
 

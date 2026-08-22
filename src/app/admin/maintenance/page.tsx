@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MaintenanceForm } from "@/components/maintenance/maintenance-form";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function MaintenancePage() {
+  await requireAdmin();
   const machines = await prisma.machine.findMany({ select: { id: true, name: true, registrationNumber: true, currentHourMeter: true, lastServiceMeter: true, lastServiceAt: true, serviceIntervalHours: true, status: true }, orderBy: { name: "asc" } });
   const records = await prisma.maintenanceRecord.findMany({ include: { machine: true }, orderBy: { serviceDate: "desc" }, take: 20 });
 

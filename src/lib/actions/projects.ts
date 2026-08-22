@@ -1,19 +1,13 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionAdmin } from "@/lib/auth-guards";
 import { projectSchema } from "@/lib/validations/project";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!session?.user) throw new Error("UNAUTHORIZED");
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("FORBIDDEN");
-}
-
 export async function createProject(prevState: unknown, formData: FormData) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized — OWNER/ADMIN only" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized — OWNER/ADMIN only" };
   const raw: Record<string, unknown> = {};
   for (const [k,v] of formData.entries()) raw[k]=v;
   if (raw.latitude === "") delete raw.latitude;
@@ -48,7 +42,8 @@ export async function createProject(prevState: unknown, formData: FormData) {
 }
 
 export async function updateProject(id: string, prevState: unknown, formData: FormData) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   const raw: Record<string, unknown> = {};
   for (const [k,v] of formData.entries()) raw[k]=v;
   if (raw.latitude === "") delete raw.latitude;
@@ -85,7 +80,8 @@ export async function updateProject(id: string, prevState: unknown, formData: Fo
 }
 
 export async function archiveProject(id: string) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   await prisma.jobSite.update({ where: { id }, data: { status: "COMPLETED" } });
   revalidatePath("/admin/projects");
   return { success: true };

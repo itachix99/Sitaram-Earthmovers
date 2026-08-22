@@ -4,8 +4,10 @@ import { MachineForm } from "@/components/machines/machine-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function EditMachinePage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const m = await prisma.machine.findUnique({ where: { id } });
   if (!m) notFound();

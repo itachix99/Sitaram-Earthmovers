@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { BreakdownStatusForm } from "@/components/breakdowns/breakdown-status-form";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function BreakdownsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requireAdmin();
   const { status } = await searchParams;
   const where: Record<string, unknown> = {};
   if (status) (where as Record<string, unknown>).status = status;

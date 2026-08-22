@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Truck, Users, MapPinned, Fuel, AlertTriangle, Clock3, IndianRupee } from "lucide-react";
 import Link from "next/link";
 import { WeeklyHoursChart } from "@/components/dashboard/weekly-hours-chart";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  await requireAdmin();
   const [totalMachines, machines, sites, operators, fuelTodayAgg, breakdownsOpen, workTodayAgg] = await Promise.all([
     prisma.machine.count(),
     prisma.machine.findMany({ orderBy: { updatedAt: "desc" }, take: 5 }),

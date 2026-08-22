@@ -1,15 +1,13 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionUser } from "@/lib/auth-guards";
 import { startWorkSchema, endWorkSchema } from "@/lib/validations/work-session";
 import { revalidatePath } from "next/cache";
 
 export async function startWork(prevState: unknown, formData: FormData) {
-  const session = await auth();
-  const userId = (session?.user as unknown as { id?: string })?.id;
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!userId) return { error: "Not authenticated" };
-  if (role !== "OPERATOR" && role !== "OWNER" && role !== "ADMIN") return { error: "Not authorized" };
+  const user = await getActionUser();
+  if (!user) return { error: "Not authenticated" };
+  const userId = user.id;
 
   const raw = {
     machineId: formData.get("machineId") as string,
@@ -69,9 +67,9 @@ export async function startWork(prevState: unknown, formData: FormData) {
 }
 
 export async function endWork(prevState: unknown, formData: FormData) {
-  const session = await auth();
-  const userId = (session?.user as unknown as { id?: string })?.id;
-  if (!userId) return { error: "Not authenticated" };
+  const user = await getActionUser();
+  if (!user) return { error: "Not authenticated" };
+  const userId = user.id;
 
   const raw = {
     sessionId: formData.get("sessionId") as string,
@@ -89,8 +87,7 @@ export async function endWork(prevState: unknown, formData: FormData) {
   const work = await prisma.workSession.findUnique({ where: { id: sessionId } });
   if (!work) return { error: "Session not found" };
   if (work.operatorId !== userId) {
-    const role = (session?.user as unknown as { role?: string })?.role;
-    if (role !== "OWNER" && role !== "ADMIN") return { error: "Not your session" };
+    if (user.role !== "OWNER" && user.role !== "ADMIN") return { error: "Not your session" };
   }
   if (work.status === "COMPLETED") return { error: "Already completed" };
   if (closingHourMeter < work.openingHourMeter) return { error: `Closing meter (${closingHourMeter}) must be ≥ opening (${work.openingHourMeter})` };

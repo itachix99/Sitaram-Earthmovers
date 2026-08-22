@@ -2,8 +2,10 @@ import { MachineForm } from "@/components/machines/machine-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { requireAdmin } from "@/lib/auth-guards";
 
-export default function NewMachinePage() {
+export default async function NewMachinePage() {
+  await requireAdmin();
   return (
     <div className="space-y-6 max-w-5xl">
       <Button variant="ghost" size="sm" asChild><Link href="/admin/machines"><ArrowLeft className="h-4 w-4" /> Back to Machinery</Link></Button>

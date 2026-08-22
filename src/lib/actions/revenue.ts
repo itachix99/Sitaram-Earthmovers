@@ -1,18 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionAdmin } from "@/lib/auth-guards";
 import { revenueSchema } from "@/lib/validations/revenue";
 import { revalidatePath } from "next/cache";
 
-async function requireAdmin() {
-  const s = await auth();
-  const r = (s?.user as unknown as { role?: string })?.role;
-  if (!s?.user) throw new Error("UNAUTHORIZED");
-  if (r !== "OWNER" && r !== "ADMIN") throw new Error("FORBIDDEN");
-}
-
 export async function createRevenue(prevState: unknown, formData: FormData) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized — OWNER/ADMIN only" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized — OWNER/ADMIN only" };
   const raw: Record<string, unknown> = {
     invoiceNumber: formData.get("invoiceNumber") as string,
     jobSiteId: (formData.get("jobSiteId") as string) || "",

@@ -1,24 +1,13 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getActionAdmin } from "@/lib/auth-guards";
 import { machineSchema } from "@/lib/validations/machine";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as unknown as { role?: string })?.role;
-  if (!session?.user) throw new Error("UNAUTHORIZED");
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("FORBIDDEN");
-  return session;
-}
-
 export async function createMachine(prevState: unknown, formData: FormData) {
-  try {
-    await requireAdmin();
-  } catch {
-    return { error: "Not authorized — OWNER/ADMIN only" };
-  }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized — OWNER/ADMIN only" };
   const raw: Record<string, unknown> = {};
   for (const [k, v] of formData.entries()) raw[k] = v;
   // coerce empty strings to undefined for optional numbers
@@ -59,7 +48,8 @@ export async function createMachine(prevState: unknown, formData: FormData) {
 }
 
 export async function updateMachine(id: string, prevState: unknown, formData: FormData) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   const raw: Record<string, unknown> = {};
   for (const [k,v] of formData.entries()) raw[k]=v;
   if (raw.manufacturingYear === "") delete raw.manufacturingYear;
@@ -99,14 +89,16 @@ export async function updateMachine(id: string, prevState: unknown, formData: Fo
 }
 
 export async function archiveMachine(id: string) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   await prisma.machine.update({ where: { id }, data: { status: "RETIRED" } });
   revalidatePath("/admin/machines");
   return { success: true };
 }
 
 export async function deleteMachine(id: string) {
-  try { await requireAdmin(); } catch { return { error: "Not authorized" }; }
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
   // Prevent hard delete if has history — soft retire instead
   const count = await prisma.workSession.count({ where: { machineId: id } });
   if (count > 0) {

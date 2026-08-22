@@ -4,8 +4,10 @@ import { OperatorForm } from "@/components/operators/operator-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function EditOperatorPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const op = await prisma.operator.findUnique({ where: { id }, include: { user: true } });
   if (!op) notFound();

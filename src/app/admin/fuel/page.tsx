@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function FuelPage({ searchParams }: { searchParams: Promise<{ q?: string; machineId?: string }> }) {
+  await requireAdmin();
   const { q, machineId } = await searchParams;
   const query = q?.trim() ?? "";
   const where: Record<string, unknown> = {};

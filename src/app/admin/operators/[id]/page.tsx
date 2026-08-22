@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { ArrowLeft, Pencil, Power } from "lucide-react";
 import { toggleOperatorStatus } from "@/lib/actions/operators";
+import { DeleteOperatorButton } from "@/components/operators/delete-operator-button";
 import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function OperatorDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -23,9 +24,10 @@ export default async function OperatorDetail({ params }: { params: Promise<{ id:
       <Button variant="ghost" size="sm" asChild><Link href="/admin/operators"><ArrowLeft className="h-4 w-4" /> Back to Operators</Link></Button>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3"><h1 className="text-2xl font-bold">{op.user.name}</h1><StatusBadge status={op.status} /><span className="text-xs text-muted-foreground">OPERATOR • {op.user.phone}</span></div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Button variant="outline" asChild><Link href={`/admin/operators/${op.id}/edit`}><Pencil className="h-4 w-4" /> Edit</Link></Button>
           <form action={async ()=>{"use server"; await toggleOperatorStatus(op.id)}}><Button variant="outline" type="submit"><Power className="h-4 w-4" /> {op.status==="ACTIVE"?"Deactivate":"Activate"}</Button></form>
+          <DeleteOperatorButton id={op.id} name={op.user.name} variant="danger" />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ArrowLeft, Fuel, Wrench, Clock3, MapPin, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { archiveMachine } from "@/lib/actions/machines";
+import { DeleteMachineButton } from "@/components/machines/delete-machine-button";
 import { requireAdmin } from "@/lib/auth-guards";
 
 export default async function MachineDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -50,11 +51,12 @@ export default async function MachineDetailPage({ params }: { params: Promise<{ 
           </div>
           <p className="text-sm text-muted-foreground">{m.manufacturer} {m.model} {m.manufacturingYear ? `• ${m.manufacturingYear}` : ""} • {m.machineType}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Button variant="outline" asChild><Link href={`/admin/machines/${m.id}/edit`}><Pencil className="h-4 w-4" /> Edit</Link></Button>
           <form action={async ()=>{"use server"; await archiveMachine(m.id)}}>
-            <Button variant="outline" type="submit" className="text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /> Retire</Button>
+            <Button variant="outline" type="submit" className="text-amber-600 hover:bg-amber-50"><Trash2 className="h-4 w-4" /> Retire</Button>
           </form>
+          <DeleteMachineButton id={m.id} name={m.name} variant="danger" />
         </div>
       </div>
 

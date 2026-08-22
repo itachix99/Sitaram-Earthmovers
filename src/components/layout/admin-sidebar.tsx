@@ -23,9 +23,17 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 
-const nav = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  badge?: string;
+  alert?: boolean;
+};
+
+const navBase: NavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/machines", label: "Machinery", icon: Truck, badge: "12" },
+  { href: "/admin/machines", label: "Machinery", icon: Truck },
   { href: "/admin/operators", label: "Operators", icon: Users },
   { href: "/admin/projects", label: "Job Sites", icon: MapPinned },
   { href: "/admin/fuel", label: "Fuel", icon: Fuel },
@@ -39,13 +47,19 @@ const nav = [
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ activeMachineryCount }: { activeMachineryCount?: number }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const displayName = (session?.user?.name as string) || "Owner";
   const displayEmail = (session?.user?.email as string) || (session?.user as unknown as { role: string; phone: string })?.phone || "owner@sitaram.co.in";
   const role = (session?.user as unknown as { role: string; phone: string })?.role || "OWNER";
+
+  const nav: NavItem[] = navBase.map((item) =>
+    item.href === "/admin/machines" && typeof activeMachineryCount === "number"
+      ? { ...item, badge: String(activeMachineryCount) }
+      : item
+  );
 
   return (
     <aside

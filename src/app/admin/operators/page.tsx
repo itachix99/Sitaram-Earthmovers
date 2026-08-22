@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-guards";
+import { DeleteOperatorButton } from "@/components/operators/delete-operator-button";
 
 export default async function OperatorsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireAdmin();
@@ -45,7 +46,7 @@ export default async function OperatorsPage({ searchParams }: { searchParams: Pr
 
       <div className="hidden md:block">
         <Table>
-          <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Phone</TableHead><TableHead>License</TableHead><TableHead>Assignment</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Phone</TableHead><TableHead>License</TableHead><TableHead>Assignment</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
           <TableBody>
             {operators.map((op)=>{
               const assign = assignMap.get(op.userId);
@@ -56,10 +57,11 @@ export default async function OperatorsPage({ searchParams }: { searchParams: Pr
                   <TableCell className="text-xs">{op.licenseNumber ?? "—"} {op.licenseExpiry ? `• exp ${new Date(op.licenseExpiry).toLocaleDateString()}`:""}</TableCell>
                   <TableCell className="text-xs">{assign ? `${assign.machine.name} • ${assign.jobSite.name}` : "Unassigned"}</TableCell>
                   <TableCell><StatusBadge status={op.status} /></TableCell>
+                  <TableCell><div className="flex items-center gap-2"><Link href={`/admin/operators/${op.id}`} className="text-xs font-semibold hover:underline">View</Link><DeleteOperatorButton id={op.id} name={op.user.name} /></div></TableCell>
                 </TableRow>
               );
             })}
-            {operators.length===0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No operators found</TableCell></TableRow>}
+            {operators.length===0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No operators found</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
@@ -68,7 +70,7 @@ export default async function OperatorsPage({ searchParams }: { searchParams: Pr
         {operators.map((op)=>{
           const assign = assignMap.get(op.userId);
           return (
-            <Card key={op.id}><CardContent className="p-4 flex justify-between gap-3"><div><Link href={`/admin/operators/${op.id}`} className="font-semibold hover:underline">{op.user.name}</Link><p className="text-xs font-mono text-muted-foreground">{op.user.phone} • {op.licenseNumber ?? "—"}</p><p className="text-xs text-muted-foreground">{assign ? `${assign.machine.name} @ ${assign.jobSite.name}`:"Unassigned"}</p></div><StatusBadge status={op.status} /></CardContent></Card>
+            <Card key={op.id}><CardContent className="p-4"><div className="flex justify-between gap-3"><div><Link href={`/admin/operators/${op.id}`} className="font-semibold hover:underline">{op.user.name}</Link><p className="text-xs font-mono text-muted-foreground">{op.user.phone} • {op.licenseNumber ?? "—"}</p><p className="text-xs text-muted-foreground">{assign ? `${assign.machine.name} @ ${assign.jobSite.name}`:"Unassigned"}</p></div><StatusBadge status={op.status} /></div><div className="mt-3 flex justify-end gap-2"><Link href={`/admin/operators/${op.id}`} className="text-xs font-semibold hover:underline self-center">View</Link><DeleteOperatorButton id={op.id} name={op.user.name} variant="outline" /></div></CardContent></Card>
           );
         })}
       </div>

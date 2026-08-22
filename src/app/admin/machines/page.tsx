@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Search, Plus, Filter } from "lucide-react";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-guards";
+import { DeleteMachineButton } from "@/components/machines/delete-machine-button";
 
 export default async function MachinesPage({ searchParams }: { searchParams: Promise<{ q?: string; type?: string; status?: string }> }) {
   await requireAdmin();
@@ -93,7 +94,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Pro
                 <TableCell className="font-mono font-medium">{m.currentHourMeter.toFixed(1)} h</TableCell>
                 <TableCell><StatusBadge status={m.status} /></TableCell>
                 <TableCell className="font-mono text-xs">{m.expectedFuelEfficiency ? `${m.expectedFuelEfficiency} L/hr` : "—"}</TableCell>
-                <TableCell><Link href={`/admin/machines/${m.id}`} className="text-xs font-semibold hover:underline">View</Link></TableCell>
+                <TableCell><div className="flex items-center gap-2"><Link href={`/admin/machines/${m.id}`} className="text-xs font-semibold hover:underline">View</Link><DeleteMachineButton id={m.id} name={m.name} /></div></TableCell>
               </TableRow>
             ))}
             {machines.length===0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No machines match filters</TableCell></TableRow>}
@@ -103,7 +104,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Pro
 
       <div className="grid gap-3 md:hidden">
         {machines.map((m)=>(
-          <Card key={m.id}><CardContent className="p-4"><div className="flex justify-between items-start"><div><Link href={`/admin/machines/${m.id}`} className="font-bold hover:underline">{m.name}</Link><p className="text-xs font-mono text-muted-foreground">{m.registrationNumber} • {m.currentHourMeter.toFixed(1)} h</p><p className="text-xs text-muted-foreground mt-1">{m.machineType} • {m.manufacturer}</p></div><StatusBadge status={m.status} /></div></CardContent></Card>
+          <Card key={m.id}><CardContent className="p-4"><div className="flex justify-between items-start"><div><Link href={`/admin/machines/${m.id}`} className="font-bold hover:underline">{m.name}</Link><p className="text-xs font-mono text-muted-foreground">{m.registrationNumber} • {m.currentHourMeter.toFixed(1)} h</p><p className="text-xs text-muted-foreground mt-1">{m.machineType} • {m.manufacturer}</p></div><StatusBadge status={m.status} /></div><div className="mt-3 flex justify-end"><DeleteMachineButton id={m.id} name={m.name} variant="outline" /></div></CardContent></Card>
         ))}
       </div>
     </div>

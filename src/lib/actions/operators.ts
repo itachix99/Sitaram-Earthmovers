@@ -102,3 +102,60 @@ export async function toggleOperatorStatus(id: string) {
   revalidatePath("/admin/operators");
   return { success: true };
 }
+
+export async function deleteOperator(id: string) {
+  const admin = await getActionAdmin();
+  if (!admin) return { error: "Not authorized" };
+  const op = await prisma.operator.findUnique({ where: { id }, include: { user: true } });
+  if (!op) return { error: "Operator not found" };
+
+  // Block if operator is actively assigned or has an active session
+  const [activeAssignment, activeSession] = await Promise.all([
+    prisma.assignment.count({ where: { operatorId: op.userId, status: "ACTIVE" } }),
+    prisma.workSession.count({ where: { operatorId: op.userId, status: "ACTIVE" } }),
+  ]);
+  if (activeAssignment > 0) return { error: "Cannot delete: operator has an active assignment. End the assignment or deactivate first." };
+  if (activeSession > 0) return { error: "Cannot delete: operator has an active work session." };
+
+  const [workSessions, fuelLogs, breakdowns, assignments, auditLogs] = await Promise.all([
+    prisma.workSession.count({ where: { operatorId: op.userId } }),
+    prisma.fuelLog.count({ where: { operatorId: op.userId } }),
+    prisma.breakdownReport.count({ where: { operatorId: op.userId } }),
+    prisma.assignment.count({ where: { operatorId: op.userId } }),
+    prisma.auditLog.count({ where: { actorId: op.userId } }),
+  ]);
+  const hasHistory = workSessions + fuelLogs + breakdowns + assignments + auditLogs > 0;
+  if (hasHistory) {
+    // Soft-deactivate: preserve history, flip both Operator and User to INACTIVE
+    if (op.status === "INACTIVE" && op.user.status === "INACTIVE") {
+      return { error: "Operator already deactivated — has history and cannot be hard-deleted." };
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.operator.update({ where: { id }, data: { status: "INACTIVE" as never } });
+      await tx.user.update({ where: { id: op.userId }, data: { status: "INACTIVE" as never } });
+    });
+    revalidatePath("/admin/operators");
+    revalidatePath(`/admin/operators/${id}`);
+    return { success: true, message: "Operator deactivated (has history, preserved)" };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.operator.delete({ where: { id } });
+      await tx.user.delete({ where: { id: op.userId } });
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("Foreign key") || msg.includes("violates")) {
+      await prisma.$transaction(async (tx) => {
+        await tx.operator.update({ where: { id }, data: { status: "INACTIVE" as never } });
+        await tx.user.update({ where: { id: op.userId }, data: { status: "INACTIVE" as never } });
+      });
+      revalidatePath("/admin/operators");
+      return { success: true, message: "Operator deactivated (linked records prevented hard delete)" };
+    }
+    return { error: msg };
+  }
+  revalidatePath("/admin/operators");
+  return { success: true };
+}

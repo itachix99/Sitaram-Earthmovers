@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
+/* Sitaram Earthmovers — Design Tokens */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-charcoal: var(--charcoal);
+  --color-charcoal-foreground: var(--charcoal-foreground);
+  --color-sitaram-yellow: var(--sitaram-yellow);
+  --color-sitaram-amber: var(--sitaram-amber);
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+  --font-display: var(--font-inter);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #F8F7F5;
+  --foreground: #131517;
+  --card: #FFFFFF;
+  --card-foreground: #131517;
+  --muted: #F1F0ED;
+  --muted-foreground: #6B7280;
+  --border: #E8E6E1;
+  --input: #E8E6E1;
+  --ring: #F5B400;
+  --primary: #F5B400;
+  --primary-foreground: #131517;
+  --charcoal: #0F1113;
+  --charcoal-foreground: #FFFFFF;
+  --sitaram-yellow: #F5B400;
+  --sitaram-amber: #E8A000;
+  --radius: 10px;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #121110;
+  --foreground: #ECEAE6;
+  --card: #1C1B19;
+  --card-foreground: #ECEAE6;
+  --muted: #252320;
+  --muted-foreground: #9E9990;
+  --border: #2C2A26;
+  --input: #2C2A26;
+  --ring: #F5B400;
+  --primary: #F5B400;
+  --primary-foreground: #131517;
+  --charcoal: #0A0C0E;
+  --charcoal-foreground: #FFFFFF;
+  --sitaram-yellow: #F5B400;
+  --sitaram-amber: #E8A000;
+  color-scheme: dark;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-mono {
+  font-family: var(--font-jetbrains), monospace;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #D6D3CD;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #3A3733;
+}
+
+::selection {
+  background: var(--sitaram-yellow);
+  color: var(--charcoal);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

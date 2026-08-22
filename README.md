@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sitaram Earthmovers — Machinery Management
 
-## Getting Started
+Production-grade machinery management for an earthmover fleet: machines, operators, hour-meters, fuel, maintenance, breakdowns, job sites, expenses and revenue. Owner/admin dashboard plus a mobile-first operator workflow (start/end work, fuel logging, issue reporting) with PWA install + offline shell.
 
-First, run the development server:
+> **Powering Every Move.**
+
+## Stack
+
+- Next.js 16 (App Router, Turbopack), React 19, TypeScript strict
+- Tailwind CSS v4 (`@theme inline` tokens), shadcn-style components
+- Prisma 6 + SQLite (`file:./dev.db`) — Postgres-ready switch documented below
+- NextAuth v5 (credentials: phone/email + bcrypt), JWT sessions, RBAC via middleware + server-action guards
+- Recharts for dashboard/analytics charts; hand-rolled service worker for offline operator pages
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+node node_modules/prisma/build/index.js migrate dev   # apply schema to prisma/dev.db
+node prisma/seed.mjs                                  # demo users, machines, operators, sites
+pnpm dev                                              # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Demo logins
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Role     | Identifier           | Password      |
+| -------- | -------------------- | ------------- |
+| OWNER    | owner@sitaram.co.in  | owner123      |
+| ADMIN    | admin@sitaram.co.in  | admin123      |
+| OPERATOR | +919876543210        | operator123   |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+```bash
+pnpm dev                        # dev server (Turbopack)
+pnpm build                      # production build
+pnpm lint                       # eslint
+pnpm typecheck                  # tsc --noEmit
+node scripts/backup-db.mjs      # timestamped SQLite backup into backups/ (keeps last 20)
+```
 
-To learn more about Next.js, take a look at the following resources:
+Note: in this environment the Prisma CLI is invoked as `node node_modules/prisma/build/index.js …` because `pnpm prisma` fails here; on a normal machine `npx prisma …` works.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Copy `.env.example` → `.env`:
 
-## Deploy on Vercel
+- `DATABASE_URL` — `file:./dev.db` (SQLite) or a Postgres URL
+- `AUTH_SECRET` / `NEXTAUTH_SECRET` — required in production (sessions are signed with it)
+- `NEXTAUTH_URL` — public origin in production
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`src/lib/env.ts` validates these at boot and fails fast with actionable errors.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Production hardening included
+
+- Login rate limiting: 5 failed attempts per identifier+IP per 15 min (in-memory; swap for Redis when scaling horizontally)
+- Security headers: `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` (see `next.config.ts`)
+- JWT session max age 30 days, refreshed daily on activity
+- Every mutating server action re-checks the session role (`requireAdmin()` or ownership checks); `/admin/*` additionally gated by middleware
+- Branded global error boundary, not-found page, operator route loading skeletons
+
+## Migrating SQLite → Postgres
+
+1. Provision Postgres and set `DATABASE_URL=postgres://...`
+2. In `prisma/schema.prisma`: change `provider = "sqlite"` → `"postgresql"`; keep `url = env("DATABASE_URL")`
+3. SQLite enums are stored as strings — after switching, convert fields to native Prisma enums if desired (optional)
+4. `npx prisma migrate dev --name postgres_init`, then `node prisma/seed.mjs`
+5. Backups: replace `scripts/backup-db.mjs` usage with `pg_dump`
+6. Deploy note: Prisma needs an OpenSSL-compatible runtime image (`node:20-slim` + `apt-get install -y openssl`)
+
+## Known scope decisions
+
+- Revenue/profit figures are labeled estimates until invoices are fully reconciled
+- Photo/receipt uploads are stubbed (toast placeholder) pending storage choice
+- Service worker intentionally never caches `/admin/*` or `/api/*` — admin data is always fetched live
+- Offline write buffering (queue Start Work/Fuel while offline) is future work

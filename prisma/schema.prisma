@@ -1,0 +1,345 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// NOTE: Production target is PostgreSQL. Switch provider to "postgresql" and set DATABASE_URL to postgres connection string.
+// All fields are Postgres-compatible (no SQLite-only). Mirrors Phase 0 ER diagram.
+
+enum UserRole {
+  OWNER
+  ADMIN
+  OPERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MachineType {
+  JCB
+  EXCAVATOR
+  BACKHOE_LOADER
+  BULLDOZER
+  LOADER
+  TIPPER
+  DUMP_TRUCK
+  CRANE
+  TRACTOR
+  OTHER
+}
+
+enum MachineStatus {
+  ACTIVE
+  WORKING
+  IDLE
+  UNDER_MAINTENANCE
+  BROKEN_DOWN
+  RETIRED
+}
+
+enum SalaryType {
+  MONTHLY
+  DAILY
+  HOURLY
+}
+
+enum JobSiteStatus {
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+}
+
+enum BillingType {
+  HOURLY
+  DAILY
+  FIXED
+  QUANTITY
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum WorkSessionStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum MaintenanceType {
+  SCHEDULED
+  UNSCHEDULED
+  REPAIR
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum ExpenseCategory {
+  FUEL
+  MAINTENANCE
+  REPAIR
+  OPERATOR_PAYMENT
+  TRANSPORT
+  SPARE_PARTS
+  PERMITS
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  phone         String     @unique
+  email         String?    @unique
+  passwordHash  String
+  role          UserRole   @default(OPERATOR)
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  operatorProfile Operator?
+  workSessions    WorkSession[]
+  fuelLogs        FuelLog[]
+  breakdowns      BreakdownReport[]
+  expensesCreated Expense[]
+}
+
+model Operator {
+  id             String     @id @default(cuid())
+  userId         String     @unique
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseNumber  String?
+  licenseExpiry  DateTime?
+  joiningDate    DateTime?
+  salaryType     SalaryType @default(MONTHLY)
+  salaryAmount   Float?
+  status         UserStatus @default(ACTIVE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Machine {
+  id                      String        @id @default(cuid())
+  name                    String
+  registrationNumber      String        @unique
+  machineType             MachineType
+  manufacturer            String?
+  model                   String?
+  manufacturingYear       Int?
+  purchaseDate            DateTime?
+  purchasePrice           Float?
+  currentHourMeter        Float         @default(0)
+  expectedFuelEfficiency  Float?
+  serviceIntervalHours    Int?          @default(500)
+  serviceIntervalDays     Int?
+  lastServiceAt           DateTime?
+  lastServiceMeter        Float?
+  status                  MachineStatus @default(ACTIVE)
+  notes                   String?
+  photoUrl                String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  assignments       Assignment[]
+  workSessions      WorkSession[]
+  fuelLogs          FuelLog[]
+  maintenanceRecords MaintenanceRecord[]
+  breakdowns        BreakdownReport[]
+  expenses          Expense[]
+}
+
+model JobSite {
+  id               String        @id @default(cuid())
+  name             String
+  clientName       String?
+  clientPhone      String?
+  address          String?
+  latitude         Float?
+  longitude        Float?
+  startDate        DateTime?
+  expectedEndDate  DateTime?
+  status           JobSiteStatus @default(ACTIVE)
+  billingType      BillingType   @default(HOURLY)
+  rate             Float?
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  assignments  Assignment[]
+  workSessions WorkSession[]
+  fuelLogs     FuelLog[]
+  expenses     Expense[]
+  revenues     Revenue[]
+}
+
+model Assignment {
+  id         String           @id @default(cuid())
+  machineId  String
+  operatorId String
+  jobSiteId  String
+  assignedAt DateTime         @default(now())
+  endedAt    DateTime?
+  status     AssignmentStatus @default(ACTIVE)
+
+  machine  Machine @relation(fields: [machineId], references: [id])
+  jobSite  JobSite @relation(fields: [jobSiteId], references: [id])
+
+  @@index([machineId])
+  @@index([jobSiteId])
+  @@index([status])
+}
+
+model WorkSession {
+  id                 String            @id @default(cuid())
+  machineId          String
+  operatorId         String
+  jobSiteId          String?
+  startTime          DateTime          @default(now())
+  endTime            DateTime?
+  openingHourMeter   Float
+  closingHourMeter   Float?
+  workingHours       Float?
+  idleHours          Float?
+  fuelUsed           Float?
+  notes              String?
+  startPhotoUrl      String?
+  endPhotoUrl        String?
+  status             WorkSessionStatus @default(ACTIVE)
+  createdAt          DateTime          @default(now())
+
+  machine  Machine @relation(fields: [machineId], references: [id])
+  operator User    @relation(fields: [operatorId], references: [id])
+  jobSite  JobSite? @relation(fields: [jobSiteId], references: [id])
+
+  @@index([machineId])
+  @@index([operatorId])
+  @@index([status])
+}
+
+model FuelLog {
+  id           String   @id @default(cuid())
+  machineId    String
+  operatorId   String
+  jobSiteId    String?
+  litres       Float
+  costPerLitre Float?
+  totalCost    Float?
+  meterReading Float?
+  date         DateTime @default(now())
+  receiptUrl   String?
+  fuelStation  String?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  machine  Machine  @relation(fields: [machineId], references: [id])
+  operator User     @relation(fields: [operatorId], references: [id])
+  jobSite  JobSite? @relation(fields: [jobSiteId], references: [id])
+
+  @@index([machineId])
+  @@index([date])
+}
+
+model MaintenanceRecord {
+  id               String          @id @default(cuid())
+  machineId        String
+  serviceType      MaintenanceType @default(SCHEDULED)
+  description      String?
+  meterReading     Float?
+  serviceDate      DateTime        @default(now())
+  nextServiceHours Float?
+  nextServiceDate  DateTime?
+  partsCost        Float?          @default(0)
+  laborCost        Float?          @default(0)
+  totalCost        Float?          @default(0)
+  serviceProvider  String?
+  receiptUrl       String?
+  notes            String?
+  createdAt        DateTime        @default(now())
+
+  machine Machine @relation(fields: [machineId], references: [id])
+
+  @@index([machineId])
+}
+
+model BreakdownReport {
+  id              String      @id @default(cuid())
+  machineId       String
+  operatorId      String
+  severity        Severity    @default(MEDIUM)
+  issue           String
+  description     String?
+  photoUrl        String?
+  location        String?
+  reportedAt      DateTime    @default(now())
+  resolvedAt      DateTime?
+  status          IssueStatus @default(OPEN)
+  resolutionNotes String?
+  createdAt       DateTime    @default(now())
+
+  machine  Machine @relation(fields: [machineId], references: [id])
+  operator User    @relation(fields: [operatorId], references: [id])
+
+  @@index([machineId])
+  @@index([status])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  category    ExpenseCategory
+  amount      Float
+  machineId   String?
+  jobSiteId   String?
+  description String?
+  date        DateTime        @default(now())
+  receiptUrl  String?
+  createdById String?
+  createdAt   DateTime        @default(now())
+
+  machine   Machine? @relation(fields: [machineId], references: [id])
+  jobSite   JobSite? @relation(fields: [jobSiteId], references: [id])
+  createdBy User?    @relation(fields: [createdById], references: [id])
+
+  @@index([category])
+  @@index([date])
+}
+
+model Revenue {
+  id              String        @id @default(cuid())
+  jobSiteId       String?
+  machineId       String?
+  invoiceNumber   String        @unique
+  amount          Float
+  amountReceived  Float         @default(0)
+  paymentStatus   PaymentStatus @default(PENDING)
+  billingStart    DateTime?
+  billingEnd      DateTime?
+  clientName      String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  jobSite JobSite? @relation(fields: [jobSiteId], references: [id])
+}

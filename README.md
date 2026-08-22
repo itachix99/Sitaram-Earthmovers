@@ -16,18 +16,15 @@ Production-grade machinery management for an earthmover fleet: machines, operato
 
 ```bash
 pnpm install
-node node_modules/prisma/build/index.js migrate dev   # apply schema to prisma/dev.db
-node prisma/seed.mjs                                  # demo users, machines, operators, sites
+node node_modules/prisma/build/index.js migrate dev   # apply schema to the dev database
+SEED_DEMO_DATA=true node prisma/seed.mjs              # optional demo data (dev only, random passwords)
 pnpm dev                                              # http://localhost:3000
 ```
 
-### Demo logins
-
-| Role     | Identifier           | Password      |
-| -------- | -------------------- | ------------- |
-| OWNER    | owner@sitaram.co.in  | owner123      |
-| ADMIN    | admin@sitaram.co.in  | admin123      |
-| OPERATOR | +919876543210        | operator123   |
+Seeding is development-only and double-guarded: it refuses to run in production
+and requires an explicit `SEED_DEMO_DATA=true`. Seeded accounts get random
+passwords printed once to the terminal — no credentials are stored in source.
+See [docs/SECURITY.md](docs/SECURITY.md) for rotation procedures.
 
 ## Scripts
 

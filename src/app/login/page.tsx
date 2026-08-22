@@ -37,16 +37,6 @@ export default function LoginPage() {
     else router.push("/admin/dashboard");
   }
 
-  function fillDemo(role: "owner" | "operator") {
-    if (role === "owner") {
-      setIdentifier("owner@sitaram.co.in");
-      setPassword("owner123");
-    } else {
-      setIdentifier("+919876543210");
-      setPassword("operator123");
-    }
-  }
-
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       <div className="hidden md:flex flex-col justify-between bg-[var(--charcoal)] text-white p-10 relative overflow-hidden">
@@ -97,7 +87,7 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="identifier">Phone or Email</Label>
-                  <Input id="identifier" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="+91 9000000001 or owner@sitaram.co.in" required />
+                  <Input id="identifier" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="+91 98765 43210 or you@company.com" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
@@ -107,25 +97,11 @@ export default function LoginPage() {
                 <Button type="submit" className="w-full" size="lg" disabled={loading}>
                   {loading ? "Signing in…" : "Sign in"}
                 </Button>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant="outline" onClick={() => fillDemo("owner")}>
-                    Fill Owner Demo
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => fillDemo("operator")}>
-                    Fill Operator Demo
-                  </Button>
-                </div>
-                <div className="rounded-lg bg-muted p-3 text-xs leading-relaxed">
-                  <p className="font-semibold">Demo accounts (seeded):</p>
-                  <p className="font-mono">owner@sitaram.co.in / owner123 (OWNER)</p>
-                  <p className="font-mono">admin@sitaram.co.in / admin123 (ADMIN)</p>
-                  <p className="font-mono">+919876543210 / operator123 (OPERATOR — Ramesh)</p>
-                </div>
               </form>
             </CardContent>
           </Card>
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            RBAC enforced server-side via middleware + JWT. Operators cannot access /admin.
+            Access is role-based. Contact the owner if you need an account.
           </p>
         </div>
       </div>

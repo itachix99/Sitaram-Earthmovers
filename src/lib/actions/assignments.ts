@@ -4,6 +4,7 @@ import { getActionAdmin } from "@/lib/auth-guards";
 import { assignmentSchema } from "@/lib/validations/project";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { writeAudit } from "@/lib/audit";
 
 export async function createAssignment(prevState: unknown, formData: FormData) {
   const admin = await getActionAdmin();
@@ -49,6 +50,7 @@ export async function createAssignment(prevState: unknown, formData: FormData) {
     }
     throw e;
   }
+  await writeAudit({ actorId: admin.id, actorRole: admin.role, action: "create", entity: "Assignment", metadata: { machineId, operatorId, jobSiteId } });
   revalidatePath(`/admin/projects/${jobSiteId}`);
   revalidatePath(`/admin/machines/${machineId}`);
   revalidatePath(`/admin/operators`);

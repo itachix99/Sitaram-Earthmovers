@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getActionAdmin } from "@/lib/auth-guards";
 import { expenseSchema } from "@/lib/validations/expense";
 import { revalidatePath } from "next/cache";
+import { writeAudit } from "@/lib/audit";
 
 export async function createExpense(prevState: unknown, formData: FormData) {
   const admin = await getActionAdmin();
@@ -20,7 +21,7 @@ export async function createExpense(prevState: unknown, formData: FormData) {
   const parsed = expenseSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues.map(i=>i.message).join(", ") };
   const d = parsed.data;
-  await prisma.expense.create({
+  const expense = await prisma.expense.create({
     data: {
       category: d.category as never,
       amount: d.amount,
@@ -31,6 +32,7 @@ export async function createExpense(prevState: unknown, formData: FormData) {
       createdById: admin.id,
     }
   });
+  await writeAudit({ actorId: admin.id, actorRole: admin.role, action: "create", entity: "Expense", entityId: expense.id, metadata: { category: d.category, amount: String(d.amount) } });
   revalidatePath("/admin/expenses");
   revalidatePath("/admin/revenue");
   if (d.machineId) revalidatePath(`/admin/machines/${d.machineId}`);

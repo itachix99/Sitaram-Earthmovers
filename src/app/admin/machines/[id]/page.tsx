@@ -72,8 +72,8 @@ export default async function MachineDetailPage({ params }: { params: Promise<{ 
             </div>
             <div className="rounded-xl bg-muted p-4 flex flex-col justify-center text-center">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">Photo</p>
-              <div className="mt-3 h-40 rounded-lg border border-dashed flex items-center justify-center text-xs text-muted-foreground bg-card">Machine image placeholder</div>
-              <p className="text-xs text-muted-foreground mt-2">Storage for receipts/meter photos arrives Phase 6</p>
+              <div className="mt-3 h-40 rounded-lg border border-dashed flex items-center justify-center text-xs text-muted-foreground bg-card">No photo — not available (authenticated storage pending Phase 6)</div>
+              <p className="text-xs text-muted-foreground mt-2">Not available — receipts/meter photos move to authenticated object storage with signed access (Phase 6)</p>
             </div>
           </CardContent>
         </Card>
@@ -116,7 +116,7 @@ export default async function MachineDetailPage({ params }: { params: Promise<{ 
         ))}
       </CardContent></Card>
 
-      <Card><CardHeader><CardTitle>Activity Timeline (placeholder)</CardTitle></CardHeader><CardContent className="space-y-3 text-sm">
+      <Card><CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader><CardContent className="space-y-3 text-sm">
         <div className="flex gap-3"><Clock3 className="h-4 w-4 mt-0.5 text-muted-foreground" /><div><p><span className="font-mono">08:12</span> — Work started • Opening 3,421.4 h</p></div></div>
         <div className="flex gap-3"><Fuel className="h-4 w-4 mt-0.5 text-muted-foreground" /><div><p><span className="font-mono">11:22</span> — 35 L diesel added</p></div></div>
         <div className="flex gap-3"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" /><div><p><span className="font-mono">13:05</span> — Hydraulic leak reported</p></div></div>

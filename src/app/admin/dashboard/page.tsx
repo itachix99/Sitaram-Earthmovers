@@ -7,6 +7,7 @@ import { Truck, Users, MapPinned, Fuel, AlertTriangle, Clock3, IndianRupee } fro
 import Link from "next/link";
 import { WeeklyHoursChart } from "@/components/dashboard/weekly-hours-chart";
 import { requireAdmin } from "@/lib/auth-guards";
+import { toNum } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -38,15 +39,15 @@ export default async function DashboardPage() {
   const allMachines = await prisma.machine.findMany({ select: { currentHourMeter: true, lastServiceMeter: true, serviceIntervalHours: true } });
   let approaching = 0, overdue = 0;
   for (const m of allMachines) {
-    const next = (m.lastServiceMeter ?? 0) + (m.serviceIntervalHours ?? 500);
-    const remaining = next - m.currentHourMeter;
+    const next = toNum(m.lastServiceMeter) + (m.serviceIntervalHours ?? 500);
+    const remaining = next - toNum(m.currentHourMeter);
     if (remaining <= 0) overdue++;
     else if (remaining <= 100) approaching++;
   }
 
-  const todayHours = workTodayAgg._sum.workingHours ?? 0;
-  const fuelLitres = fuelTodayAgg._sum.litres ?? 0;
-  const fuelCost = fuelTodayAgg._sum.totalCost ?? 0;
+  const todayHours = toNum(workTodayAgg._sum.workingHours);
+  const fuelLitres = toNum(fuelTodayAgg._sum.litres);
+  const fuelCost = toNum(fuelTodayAgg._sum.totalCost);
 
   // Weekly hours last 7 days
   const days: { day: string; date: Date }[] = [];
@@ -67,9 +68,18 @@ export default async function DashboardPage() {
     prisma.breakdownReport.findMany({ include: { machine: true, operator: true }, orderBy: { reportedAt: "desc" }, take: 2 }),
   ]);
 
-  // Estimated revenue today: hours * avg rate (approx) — use 1800 as fallback
-  const avgRate = 1800;
-  const estRevenue = todayHours * avgRate;
+  // Revenue today: derived from actual site rates (fallback 1800 only when no rate)
+  const siteRates = await prisma.jobSite.findMany({ select: { id: true, rate: true } });
+  const rateMap = new Map(siteRates.map(s => [s.id, Number(s.rate ?? 1800)]));
+  const todaySessionsForRevenue = await prisma.workSession.findMany({ where: { startTime: { gte: new Date(new Date().setHours(0,0,0,0)) }, status: "COMPLETED" }, select: { workingHours: true, jobSiteId: true } });
+  let estRevenue = 0;
+  let usedFallback = false;
+  for (const s of todaySessionsForRevenue) {
+    const r = s.jobSiteId ? rateMap.get(s.jobSiteId) : undefined;
+    if (r === undefined) usedFallback = true;
+    estRevenue += Number(s.workingHours ?? 0) * (r ?? 1800);
+  }
+  const avgRate = todaySessionsForRevenue.length ? Math.round(estRevenue / Math.max(0.1, todayHours)) : 1800;
 
   return (
     <div className="space-y-6">
@@ -82,7 +92,7 @@ export default async function DashboardPage() {
         <StatCard label="Total Machines" value={totalMachines} sub={`${active} active • ${working} working`} icon={Truck} />
         <StatCard label="Working Now" value={working} sub={`${totalMachines?Math.round(working/totalMachines*100):0}% utilization • ${idle} idle`} icon={Clock3} variant="yellow" />
         <StatCard label="Fuel Today" value={`${fuelLitres.toFixed(0)} L`} sub={`₹${fuelCost.toLocaleString("en-IN")} • ${todayHours? (fuelLitres/todayHours).toFixed(1):"—"} L/hr`} icon={Fuel} />
-        <StatCard label="Revenue (Today)" value={`₹${(estRevenue/1000).toFixed(1)}k`} sub={`Est. @₹${avgRate}/hr • ${todayHours.toFixed(1)}h`} icon={IndianRupee} variant="charcoal" />
+        <StatCard label="Revenue (Today)" value={`₹${(estRevenue/1000).toFixed(1)}k`} sub={`${usedFallback ? "~" : ""}₹${avgRate}/hr avg • ${todayHours.toFixed(1)}h • from site rates`} icon={IndianRupee} variant="charcoal" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -120,10 +130,10 @@ export default async function DashboardPage() {
             <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               {recentSessions.map(s=> (
-                <div key={s.id} className="flex gap-3"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mt-2" /><div><p><span className="font-semibold">{s.operator.name}</span> completed {s.machine.name} • {s.workingHours?.toFixed(1)} h</p><p className="text-xs text-muted-foreground">{s.openingHourMeter.toFixed(1)} → {s.closingHourMeter?.toFixed(1)} h</p></div></div>
+                <div key={s.id} className="flex gap-3"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mt-2" /><div><p><span className="font-semibold">{s.operator.name}</span> completed {s.machine.name} • {s.workingHours ? toNum(s.workingHours).toFixed(1) : "—"} h</p><p className="text-xs text-muted-foreground">{toNum(s.openingHourMeter).toFixed(1)} → {s.closingHourMeter ? toNum(s.closingHourMeter).toFixed(1) : "—"} h</p></div></div>
               ))}
               {recentFuel.map(f=> (
-                <div key={f.id} className="flex gap-3"><div className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-2" /><div><p>{f.litres} L diesel added — {f.machine.name}</p><p className="text-xs text-muted-foreground">₹{f.totalCost ?? "—"} • {f.fuelStation ?? "—"}</p></div></div>
+                <div key={f.id} className="flex gap-3"><div className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-2" /><div><p>{toNum(f.litres)} L diesel added — {f.machine.name}</p><p className="text-xs text-muted-foreground">₹{f.totalCost ? toNum(f.totalCost).toLocaleString("en-IN") : "—"} • {f.fuelStation ?? "—"}</p></div></div>
               ))}
               {recentBreakdowns.map(b=> (
                 <div key={b.id} className="flex gap-3"><div className="h-1.5 w-1.5 rounded-full bg-red-500 mt-2" /><div><p>Breakdown: {b.issue} — {b.machine.name}</p><p className="text-xs text-muted-foreground">Reported by {b.operator.name} • {b.severity}</p></div></div>

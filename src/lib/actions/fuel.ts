@@ -31,16 +31,21 @@ export async function createFuelLog(prevState: unknown, formData: FormData) {
   if (!machine) return { error: "Machine not found" };
 
   // Operators may only log fuel for machines they are actively assigned to.
+  // The assignment jobSiteId is the source of truth — client jobSiteId is ignored/validated.
+  let effectiveJobSiteId: string | null = jobSiteId || null;
   if (user.role === "OPERATOR") {
     const assigned = await prisma.assignment.findFirst({
       where: { operatorId: user.id, machineId, status: "ACTIVE" },
-      select: { id: true },
+      select: { id: true, jobSiteId: true },
     });
     if (!assigned) return { error: "You can only log fuel for your assigned machine." };
+    effectiveJobSiteId = assigned.jobSiteId;
+    if (jobSiteId && jobSiteId !== assigned.jobSiteId) {
+      return { error: "Fuel log site must match your active assignment." };
+    }
   }
 
-  // Validate meterReading not less than current if provided? Allow but warn
-  if (meterReading !== undefined && meterReading < 0) return { error: "Meter reading must be ≥ 0" };
+  if (meterReading !== undefined && meterReading < 0) return { error: "Meter reading must be \u2265 0" };
 
   const totalCost = costPerLitre ? Number((litres * costPerLitre).toFixed(2)) : null;
   const logDate = date ? new Date(date as string) : new Date();
@@ -49,7 +54,7 @@ export async function createFuelLog(prevState: unknown, formData: FormData) {
     data: {
       machineId,
       operatorId: user.id,
-      jobSiteId: jobSiteId || null,
+      jobSiteId: effectiveJobSiteId,
       litres,
       costPerLitre: costPerLitre ?? null,
       totalCost,

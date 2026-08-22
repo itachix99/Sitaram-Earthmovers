@@ -6,13 +6,28 @@ import autoTable from "jspdf-autotable";
 
 export const dynamic = "force-dynamic";
 
-type Cell = string | number | null;
+type Cell = string | number | null | unknown;
 type ReportData = { title: string; headers: string[]; rows: Cell[][] };
 
 function csvEscape(v: Cell): string {
-  const s = String(v ?? "");
+  const s = sanitizeCell(v);
   if (s.includes(",") || s.includes('"') || s.includes("\n")) return `"${s.replace(/"/g, '""')}"`;
   return s;
+}
+
+/**
+ * Neutralize spreadsheet formula injection: if a string starts with = + - @
+ * or contains leading tab-like chars, prefix with a single quote so Excel
+ * renders it as text. Applied to every text cell in CSV and XLSX.
+ */
+function sanitizeCell(v: Cell): string {
+  const s = String(v ?? "");
+  if (/^[\s]*[=+\-@]/.test(s)) return "'" + s;
+  return s;
+}
+
+function sanitizeRow(row: Cell[]): Cell[] {
+  return row.map(c => typeof c === "string" ? sanitizeCell(c) : c);
 }
 
 function toCsv(data: ReportData): string {
@@ -26,7 +41,7 @@ async function toXlsx(data: ReportData): Promise<Buffer> {
   const ws = wb.addWorksheet(data.title.slice(0, 31));
   ws.addRow(data.headers);
   for (const row of data.rows) {
-    ws.addRow(row.map((c) => (c === null ? null : c)) as ExcelJS.CellValue[]);
+    ws.addRow(sanitizeRow(row).map((c) => (c === null ? null : c)) as ExcelJS.CellValue[]);
   }
   const header = ws.getRow(1);
   header.font = { bold: true, color: { argb: "FF0F1113" } };
@@ -55,8 +70,8 @@ function toPdf(data: ReportData): Buffer {
   doc.text(`Generated ${new Date().toLocaleString()} - amounts in INR`, 40, 52);
   doc.setTextColor(0);
   autoTable(doc, {
-    head: [data.headers],
-    body: data.rows.map((r) => r.map((c) => (c === null ? "" : String(c)))),
+    head: [data.headers.map(sanitizeCell)],
+    body: data.rows.map((r) => sanitizeRow(r).map((c) => (c === null ? "" : String(c)))),
     startY: 64,
     styles: { fontSize: 8, cellPadding: 4 },
     headStyles: { fillColor: [245, 180, 0], textColor: [15, 17, 19], fontStyle: "bold" },
@@ -78,9 +93,18 @@ function attachmentHeader(filename: string): string {
   return `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
-async function getReportData(type: string, machineId: string | null, operatorId: string | null, projectId: string | null, start: string | null, end: string | null): Promise<ReportData> {
-  const startDate = start ? new Date(start) : null;
-  const endDate = end ? new Date(end) : null;
+function parseDateParam(v: string | null, label: string): Date | null {
+  if (!v) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error(`Invalid ${label} date. Use YYYY-MM-DD.`);
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) throw new Error(`Invalid ${label} date.`);
+  return d;
+}
+
+async function getReportData(type: string, machineId: string | null, operatorId: string | null, projectId: string | null, start: string | null, end: string | null): Promise<ReportData & { truncated?: boolean }> {
+  const startDate = parseDateParam(start, "start");
+  const endDate = parseDateParam(end, "end");
+  if (startDate && endDate && startDate > endDate) throw new Error("Start date must be ≤ end date.");
   if (endDate) endDate.setHours(23, 59, 59, 999);
   const dateFilter = (field: string): Record<string, unknown> => ({
     [field]: { ...(startDate ? { gte: startDate } : {}), ...(endDate ? { lte: endDate } : {}) },
@@ -138,10 +162,10 @@ async function getReportData(type: string, machineId: string | null, operatorId:
     const rows: Cell[][] = [];
     for (const s of sites) {
       const [workAgg, fuelAgg, expAgg, revAgg] = await Promise.all([
-        prisma.workSession.aggregate({ where: { jobSiteId: s.id, status: "COMPLETED" }, _sum: { workingHours: true } }),
-        prisma.fuelLog.aggregate({ where: { jobSiteId: s.id }, _sum: { litres: true, totalCost: true } }),
-        prisma.expense.aggregate({ where: { jobSiteId: s.id }, _sum: { amount: true } }),
-        prisma.revenue.aggregate({ where: { jobSiteId: s.id }, _sum: { amount: true } }),
+        prisma.workSession.aggregate({ where: { jobSiteId: s.id, status: "COMPLETED", ...(startDate||endDate?{startTime:{...(startDate?{gte:startDate}:{}),...(endDate?{lte:endDate}:{})}}:{} ) }, _sum: { workingHours: true } }),
+        prisma.fuelLog.aggregate({ where: { jobSiteId: s.id, ...(startDate||endDate?{date:{...(startDate?{gte:startDate}:{}),...(endDate?{lte:endDate}:{})}}:{} ) }, _sum: { litres: true, totalCost: true } }),
+        prisma.expense.aggregate({ where: { jobSiteId: s.id, category:{not:"FUEL"}, ...(startDate||endDate?{date:{...(startDate?{gte:startDate}:{}),...(endDate?{lte:endDate}:{})}}:{} ) }, _sum: { amount: true } }),
+        prisma.revenue.aggregate({ where: { jobSiteId: s.id, ...(startDate||endDate?{createdAt:{...(startDate?{gte:startDate}:{}),...(endDate?{lte:endDate}:{})}}:{} ) }, _sum: { amount: true } }),
       ]);
       const hours = workAgg._sum.workingHours ?? 0;
       const litres = fuelAgg._sum.litres ?? 0;
@@ -186,14 +210,24 @@ export async function GET(req: Request) {
   const format = searchParams.get("format") ?? "csv";
   const safeType = type.replace(/[^a-zA-Z0-9_-]+/g, "") || "report";
   const baseName = `${safeType}-report_${fileStamp()}`;
-  const data = await getReportData(type, searchParams.get("machineId"), searchParams.get("operatorId"), searchParams.get("projectId"), searchParams.get("start"), searchParams.get("end"));
+  let data: ReportData;
+  try {
+    data = await getReportData(type, searchParams.get("machineId"), searchParams.get("operatorId"), searchParams.get("projectId"), searchParams.get("start"), searchParams.get("end"));
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Invalid request";
+    return new Response(msg, { status: 400 });
+  }
+  const truncatedNote = (data as { truncated?: boolean }).truncated;
 
+  const isTruncated = data.rows.length >= 1000;
+  const truncatedSuffix = isTruncated ? "\n# NOTE: results capped at 1000 rows — apply narrower filters or paginate for full export." : "";
   if (format === "xlsx") {
     const buf = await toXlsx(data);
     return new Response(new Uint8Array(buf), {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": attachmentHeader(`${baseName}.xlsx`),
+        ...(isTruncated ? { "X-Export-Truncated": "1", "X-Export-Limit": "1000" } : {}),
       },
     });
   }
@@ -203,13 +237,16 @@ export async function GET(req: Request) {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": attachmentHeader(`${baseName}.pdf`),
+        ...(isTruncated ? { "X-Export-Truncated": "1", "X-Export-Limit": "1000" } : {}),
       },
     });
   }
-  return new Response(toCsv(data), {
+  const csvBody = toCsv(data) + truncatedSuffix;
+  return new Response(csvBody, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": attachmentHeader(`${baseName}.csv`),
+      ...(isTruncated ? { "X-Export-Truncated": "1", "X-Export-Limit": "1000" } : {}),
     },
   });
 }

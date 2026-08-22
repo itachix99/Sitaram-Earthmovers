@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getActionAdmin } from "@/lib/auth-guards";
 import { revenueSchema } from "@/lib/validations/revenue";
 import { revalidatePath } from "next/cache";
+import { writeAudit } from "@/lib/audit";
 
 export async function createRevenue(prevState: unknown, formData: FormData) {
   const admin = await getActionAdmin();
@@ -26,7 +27,7 @@ export async function createRevenue(prevState: unknown, formData: FormData) {
   if (!parsed.success) return { error: parsed.error.issues.map(i=>i.message).join(", ") };
   const d = parsed.data;
   try {
-    await prisma.revenue.create({
+    const revenue = await prisma.revenue.create({
       data: {
         invoiceNumber: d.invoiceNumber,
         jobSiteId: d.jobSiteId || null,
@@ -40,6 +41,7 @@ export async function createRevenue(prevState: unknown, formData: FormData) {
         notes: d.notes || null,
       }
     });
+  await writeAudit({ actorId: admin.id, actorRole: admin.role, action: "create", entity: "Revenue", entityId: revenue.id, metadata: { invoiceNumber: d.invoiceNumber, amount: String(d.amount) } });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("Unique constraint")) return { error: "Invoice number already exists" };

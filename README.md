@@ -8,7 +8,7 @@ Production-grade machinery management for an earthmover fleet: machines, operato
 
 - Next.js 16 (App Router, Turbopack), React 19, TypeScript strict
 - Tailwind CSS v4 (`@theme inline` tokens), shadcn-style components
-- Prisma 6 + SQLite (`file:./dev.db`) — Postgres-ready switch documented below
+- Prisma 6 + PostgreSQL (Neon) — local dev connects via DATABASE_URL
 - NextAuth v5 (credentials: phone/email + bcrypt), JWT sessions, RBAC via middleware + server-action guards
 - Recharts for dashboard/analytics charts; hand-rolled service worker for offline operator pages
 

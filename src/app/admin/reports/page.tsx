@@ -100,10 +100,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     const sites = await prisma.jobSite.findMany({ include: { assignments: true } });
     const rows = await Promise.all(sites.filter(s=> !projectId || s.id===projectId).map(async s=>{
       const [workAgg, fuelAgg, expAgg, revAgg] = await Promise.all([
-        prisma.workSession.aggregate({ where: { jobSiteId: s.id, status: "COMPLETED" }, _sum: { workingHours: true } }),
-        prisma.fuelLog.aggregate({ where: { jobSiteId: s.id }, _sum: { litres: true, totalCost: true } }),
-        prisma.expense.aggregate({ where: { jobSiteId: s.id }, _sum: { amount: true } }),
-        prisma.revenue.aggregate({ where: { jobSiteId: s.id }, _sum: { amount: true } }),
+        prisma.workSession.aggregate({ where: { jobSiteId: s.id, status: "COMPLETED", ...(startDate||endDate?{startTime:{...(startDate?{gte:startDate}:{}),...(endDate?{lte:endDate}:{})}}:{} ) }, _sum: { workingHours: true } }),
+        prisma.fuelLog.aggregate({ where: { jobSiteId: s.id, ...(startDate||endDate?{date:{...(startDate?{gte:startDate}:{}),...(endDate?{lte:endDate}:{})}}:{} ) }, _sum: { litres: true, totalCost: true } }),
+        prisma.expense.aggregate({ where: { jobSiteId: s.id, category:{not:"FUEL"}, ...(startDate||endDate?{date:{...(startDate?{gte:startDate}:{}),...(endDate?{lte:endDate}:{})}}:{} ) }, _sum: { amount: true } }),
+        prisma.revenue.aggregate({ where: { jobSiteId: s.id, ...(startDate||endDate?{createdAt:{...(startDate?{gte:startDate}:{}),...(endDate?{lte:endDate}:{})}}:{} ) }, _sum: { amount: true, amountReceived: true } }),
       ]);
       return { site: s, hours: workAgg._sum.workingHours ?? 0, litres: fuelAgg._sum.litres ?? 0, fuelCost: fuelAgg._sum.totalCost ?? 0, expCost: expAgg._sum.amount ?? 0, revenue: revAgg._sum.amount ?? 0 };
     }));
@@ -151,11 +151,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         <CardContent>
           <form method="GET" className="grid gap-3 md:grid-cols-5">
             <input type="hidden" name="type" value={type} />
-            <select name="machineId" defaultValue={machineId ?? ""} className="h-10 rounded-md border border-input bg-card px-3 text-sm"><option value="">All Machines</option>{machines.map(m=> <option key={m.id} value={m.id}>{m.name} • {m.registrationNumber}</option>)}</select>
-            <select name="operatorId" defaultValue={operatorId ?? ""} className="h-10 rounded-md border border-input bg-card px-3 text-sm"><option value="">All Operators</option>{operators.map(o=> <option key={o.id} value={o.id}>{o.name}</option>)}</select>
-            <select name="projectId" defaultValue={projectId ?? ""} className="h-10 rounded-md border border-input bg-card px-3 text-sm"><option value="">All Projects</option>{sites.map(s=> <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-            <input type="date" name="start" defaultValue={start ?? ""} className="h-10 rounded-md border border-input bg-card px-3 text-sm" />
-            <input type="date" name="end" defaultValue={end ?? ""} className="h-10 rounded-md border border-input bg-card px-3 text-sm" />
+            <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">Machine</span><select aria-label="Filter by machine" name="machineId" defaultValue={machineId ?? ""} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"><option value="">All Machines</option>{machines.map(m=> <option key={m.id} value={m.id}>{m.name} • {m.registrationNumber}</option>)}</select></label>
+            <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">Operator</span><select aria-label="Filter by operator" name="operatorId" defaultValue={operatorId ?? ""} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"><option value="">All Operators</option>{operators.map(o=> <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
+            <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">Project</span><select aria-label="Filter by project" name="projectId" defaultValue={projectId ?? ""} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"><option value="">All Projects</option>{sites.map(s=> <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+            <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">Start date</span><input aria-label="Start date" type="date" name="start" defaultValue={start ?? ""} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" /></label>
+            <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">End date</span><input aria-label="End date" type="date" name="end" defaultValue={end ?? ""} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" /></label>
             <div className="flex gap-2 md:col-span-5">
               <Button type="submit" variant="outline">Apply Filters</Button>
               <Button variant="ghost" asChild><Link href={`/admin/reports?type=${type}`}>Clear</Link></Button>

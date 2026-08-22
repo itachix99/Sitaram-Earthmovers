@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WeeklyHoursChart } from "@/components/dashboard/weekly-hours-chart";
 import { requireAdmin } from "@/lib/auth-guards";
+import { toNum } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -16,19 +17,23 @@ export default async function AnalyticsPage() {
   const availableHours = 30 * 8; // 8h per day
 
   const machineStats = await Promise.all(machines.map(async m=>{
+    // Single consistent window: last 30 days for every metric. Fuel expense double-count is avoided
+    // by excluding category FUEL from the Expense aggregate — fuel cost comes only from FuelLog.totalCost.
+    // Revenue scope is documentated as cash-collected (amountReceived) vs invoiced (amount); the table
+    // shows both via the project section. See notes below the table.
     const [workAgg, fuelAgg, maintAgg, expAgg, revAgg] = await Promise.all([
       prisma.workSession.aggregate({ where: { machineId: m.id, status: "COMPLETED", startTime: { gte: since } }, _sum: { workingHours: true } }),
       prisma.fuelLog.aggregate({ where: { machineId: m.id, date: { gte: since } }, _sum: { litres: true, totalCost: true } }),
-      prisma.maintenanceRecord.aggregate({ where: { machineId: m.id }, _sum: { totalCost: true } }),
-      prisma.expense.aggregate({ where: { machineId: m.id }, _sum: { amount: true } }),
-      prisma.revenue.aggregate({ where: { machineId: m.id }, _sum: { amount: true } }),
+      prisma.maintenanceRecord.aggregate({ where: { machineId: m.id, serviceDate: { gte: since } }, _sum: { totalCost: true } }),
+      prisma.expense.aggregate({ where: { machineId: m.id, date: { gte: since }, category: { not: "FUEL" } }, _sum: { amount: true } }),
+      prisma.revenue.aggregate({ where: { machineId: m.id, createdAt: { gte: since } }, _sum: { amount: true, amountReceived: true } }),
     ]);
-    const hours = workAgg._sum.workingHours ?? 0;
-    const litres = fuelAgg._sum.litres ?? 0;
-    const fuelCost = fuelAgg._sum.totalCost ?? 0;
-    const maintCost = maintAgg._sum.totalCost ?? 0;
-    const expCost = expAgg._sum.amount ?? 0;
-    const revenue = revAgg._sum.amount ?? 0;
+    const hours = toNum(workAgg._sum.workingHours);
+    const litres = toNum(fuelAgg._sum.litres);
+    const fuelCost = toNum(fuelAgg._sum.totalCost);
+    const maintCost = toNum(maintAgg._sum.totalCost);
+    const expCost = toNum(expAgg._sum.amount);
+    const revenue = toNum(revAgg._sum.amount);
     const utilization = availableHours ? (hours / availableHours * 100) : 0;
     const fuelEff = hours>0 ? litres / hours : null;
     const costPerHour = hours>0 ? (fuelCost + maintCost + expCost) / hours : null;
@@ -37,7 +42,7 @@ export default async function AnalyticsPage() {
     let fuelStatus: "ok"|"warning"|"danger" = "ok";
     let fuelDiff: number | null = null;
     if (fuelEff !== null && m.expectedFuelEfficiency) {
-      fuelDiff = ((fuelEff - m.expectedFuelEfficiency)/m.expectedFuelEfficiency)*100;
+      fuelDiff = ((fuelEff - toNum(m.expectedFuelEfficiency))/toNum(m.expectedFuelEfficiency))*100;
       if (fuelDiff > 30) fuelStatus="danger"; else if (fuelDiff>10) fuelStatus="warning";
     }
     return { machine: m, hours, litres, fuelCost, maintCost, expCost, revenue, utilization, fuelEff, costPerHour, maintPerHour, profit, fuelStatus, fuelDiff };
@@ -45,17 +50,17 @@ export default async function AnalyticsPage() {
 
   const projectStats = await Promise.all(sites.map(async s=>{
     const [workAgg, fuelAgg, expAgg, revAgg] = await Promise.all([
-      prisma.workSession.aggregate({ where: { jobSiteId: s.id, status: "COMPLETED" }, _sum: { workingHours: true } }),
-      prisma.fuelLog.aggregate({ where: { jobSiteId: s.id }, _sum: { litres: true, totalCost: true } }),
-      prisma.expense.aggregate({ where: { jobSiteId: s.id }, _sum: { amount: true } }),
-      prisma.revenue.aggregate({ where: { jobSiteId: s.id }, _sum: { amount: true, amountReceived: true } }),
+      prisma.workSession.aggregate({ where: { jobSiteId: s.id, status: "COMPLETED", startTime: { gte: since } }, _sum: { workingHours: true } }),
+      prisma.fuelLog.aggregate({ where: { jobSiteId: s.id, date: { gte: since } }, _sum: { litres: true, totalCost: true } }),
+      prisma.expense.aggregate({ where: { jobSiteId: s.id, date: { gte: since }, category: { not: "FUEL" } }, _sum: { amount: true } }),
+      prisma.revenue.aggregate({ where: { jobSiteId: s.id, createdAt: { gte: since } }, _sum: { amount: true, amountReceived: true } }),
     ]);
-    const hours = workAgg._sum.workingHours ?? 0;
-    const litres = fuelAgg._sum.litres ?? 0;
-    const fuelCost = fuelAgg._sum.totalCost ?? 0;
-    const expCost = expAgg._sum.amount ?? 0;
-    const revenue = revAgg._sum.amount ?? 0;
-    const received = revAgg._sum.amountReceived ?? 0;
+    const hours = toNum(workAgg._sum.workingHours);
+    const litres = toNum(fuelAgg._sum.litres);
+    const fuelCost = toNum(fuelAgg._sum.totalCost);
+    const expCost = toNum(expAgg._sum.amount);
+    const revenue = toNum(revAgg._sum.amount);
+    const received = toNum(revAgg._sum.amountReceived);
     const profit = revenue - (expCost + fuelCost);
     const costPerHour = hours>0 ? (expCost+fuelCost)/hours : null;
     return { site: s, hours, litres, fuelCost, expCost, revenue, received, profit, costPerHour };
@@ -97,7 +102,7 @@ export default async function AnalyticsPage() {
         </CardContent></Card>
       )}
 
-      <Card><CardHeader><CardTitle>Machine Utilization & Profitability (30d)</CardTitle></CardHeader><CardContent>
+      <Card><CardHeader><CardTitle>Machine Utilization & Profitability (30d)</CardTitle><p className="text-xs text-muted-foreground">Window: last 30 days for all metrics • Fuel cost from fuel logs only (FUEL expenses excluded to avoid double count) • Revenue = invoiced; see project table for collected</p></CardHeader><CardContent>
         <div className="hidden md:block">
           <Table>
             <TableHeader><TableRow><TableHead>Machine</TableHead><TableHead>Hours</TableHead><TableHead>Util %</TableHead><TableHead>Fuel L/hr</TableHead><TableHead>Cost/hr</TableHead><TableHead>Maint/hr</TableHead><TableHead>Profit (est.)</TableHead></TableRow></TableHeader>
@@ -107,7 +112,7 @@ export default async function AnalyticsPage() {
                   <TableCell><span className="font-semibold">{s.machine.name}</span><div className="text-xs font-mono">{s.machine.registrationNumber}</div></TableCell>
                   <TableCell className="font-mono">{s.hours.toFixed(1)}</TableCell>
                   <TableCell><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.utilization<10?"bg-red-100 text-red-800":s.utilization<30?"bg-amber-100 text-amber-800":"bg-emerald-100 text-emerald-800"}`}>{s.utilization.toFixed(1)}%</span></TableCell>
-                  <TableCell className="font-mono text-xs">{s.fuelEff!==null?`${s.fuelEff.toFixed(2)}`:`—`} {s.fuelDiff!==null && <span className={s.fuelStatus==="danger"?"text-red-600":s.fuelStatus==="warning"?"text-amber-600":"text-muted-foreground"}>({s.fuelDiff>0?`+${s.fuelDiff.toFixed(0)}%`: `${s.fuelDiff.toFixed(0)}%`})</span>}<div className="text-xs text-muted-foreground">exp {s.machine.expectedFuelEfficiency ?? "—"}</div></TableCell>
+                  <TableCell className="font-mono text-xs">{s.fuelEff!==null?`${s.fuelEff.toFixed(2)}`:`—`} {s.fuelDiff!==null && <span className={s.fuelStatus==="danger"?"text-red-600":s.fuelStatus==="warning"?"text-amber-600":"text-muted-foreground"}>({s.fuelDiff>0?`+${s.fuelDiff.toFixed(0)}%`: `${s.fuelDiff.toFixed(0)}%`})</span>}<div className="text-xs text-muted-foreground">exp {s.machine.expectedFuelEfficiency ? toNum(s.machine.expectedFuelEfficiency).toFixed(2) : "—"}</div></TableCell>
                   <TableCell className="font-mono text-xs">{s.costPerHour!==null?`₹${s.costPerHour.toFixed(0)}`:"—"}</TableCell>
                   <TableCell className="font-mono text-xs">{s.maintPerHour!==null?`₹${s.maintPerHour.toFixed(0)}`:"—"}</TableCell>
                   <TableCell className={`font-mono font-bold ${s.profit>=0?"text-emerald-700":"text-red-700"}`}>₹{s.profit.toLocaleString("en-IN")}</TableCell>

@@ -9,6 +9,7 @@
  * `getAction*` variants inside server actions (they return null so the action
  * can render a form error instead of a redirect).
  */
+import "server-only";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -109,6 +110,22 @@ export async function hasActiveAssignment(
  * All ACTIVE assignments (with machine + job site) for a user, newest first.
  * Used to scope operator UI lists and submission checks to assigned resources.
  */
+/** Page guard: require an ACTIVE assignment for this operator + machine.
+ *  Server-only DB check; OWNER/ADMIN bypass scope. Redirects if not assigned. */
+export async function requireAssignedOperator(machineId: string, jobSiteId?: string | null): Promise<AuthUser> {
+  const user = await requireActiveUser();
+  if (user.role !== "OPERATOR") return user;
+  const ok = await hasActiveAssignment(user.id, machineId, jobSiteId ?? undefined);
+  if (!ok) redirect("/operator/today?error=not_assigned");
+  return user;
+}
+
+/** Action helper: returns error string if not assigned, null if ok. */
+export async function assertAssignedOperator(userId: string, machineId: string, jobSiteId?: string | null): Promise<string | null> {
+  const ok = await hasActiveAssignment(userId, machineId, jobSiteId ?? undefined);
+  return ok ? null : "You are not actively assigned to this machine. Ask your admin for an assignment.";
+}
+
 export async function getActiveAssignments(userId: string) {
   return prisma.assignment.findMany({
     where: { operatorId: userId, status: "ACTIVE" },

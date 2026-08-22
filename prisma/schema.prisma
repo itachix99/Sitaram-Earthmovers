@@ -124,6 +124,8 @@ model User {
   fuelLogs        FuelLog[]
   breakdowns      BreakdownReport[]
   expensesCreated Expense[]
+  assignments     Assignment[]
+  auditLogs       AuditLog[]
 }
 
 model Operator {
@@ -134,7 +136,7 @@ model Operator {
   licenseExpiry  DateTime?
   joiningDate    DateTime?
   salaryType     SalaryType @default(MONTHLY)
-  salaryAmount   Float?
+  salaryAmount   Decimal?   @db.Decimal(12, 2)
   status         UserStatus @default(ACTIVE)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -149,13 +151,13 @@ model Machine {
   model                   String?
   manufacturingYear       Int?
   purchaseDate            DateTime?
-  purchasePrice           Float?
-  currentHourMeter        Float         @default(0)
-  expectedFuelEfficiency  Float?
+  purchasePrice           Decimal?      @db.Decimal(14, 2)
+  currentHourMeter        Decimal       @default(0) @db.Decimal(10, 2)
+  expectedFuelEfficiency  Decimal?      @db.Decimal(6, 2)
   serviceIntervalHours    Int?          @default(500)
   serviceIntervalDays     Int?
   lastServiceAt           DateTime?
-  lastServiceMeter        Float?
+  lastServiceMeter        Decimal?      @db.Decimal(10, 2)
   status                  MachineStatus @default(ACTIVE)
   notes                   String?
   photoUrl                String?
@@ -168,6 +170,7 @@ model Machine {
   maintenanceRecords MaintenanceRecord[]
   breakdowns        BreakdownReport[]
   expenses          Expense[]
+  revenues          Revenue[]
 }
 
 model JobSite {
@@ -182,7 +185,7 @@ model JobSite {
   expectedEndDate  DateTime?
   status           JobSiteStatus @default(ACTIVE)
   billingType      BillingType   @default(HOURLY)
-  rate             Float?
+  rate             Decimal?      @db.Decimal(12, 2)
   notes            String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -207,11 +210,13 @@ model Assignment {
   status     AssignmentStatus @default(ACTIVE)
 
   machine  Machine @relation(fields: [machineId], references: [id])
+  operator User    @relation(fields: [operatorId], references: [id])
   jobSite  JobSite @relation(fields: [jobSiteId], references: [id])
 
   @@index([machineId])
   @@index([jobSiteId])
   @@index([status])
+  @@index([operatorId, status])
 }
 
 model WorkSession {
@@ -225,24 +230,25 @@ model WorkSession {
   jobSiteId          String?
   startTime          DateTime          @default(now())
   endTime            DateTime?
-  openingHourMeter   Float
-  closingHourMeter   Float?
-  workingHours       Float?
-  idleHours          Float?
-  fuelUsed           Float?
+  openingHourMeter   Decimal           @db.Decimal(10, 2)
+  closingHourMeter   Decimal?          @db.Decimal(10, 2)
+  workingHours       Decimal?          @db.Decimal(8, 2)
+  idleHours          Decimal?          @db.Decimal(8, 2)
+  fuelUsed           Decimal?          @db.Decimal(10, 2)
   notes              String?
   startPhotoUrl      String?
   endPhotoUrl        String?
   status             WorkSessionStatus @default(ACTIVE)
   createdAt          DateTime          @default(now())
 
-  machine  Machine @relation(fields: [machineId], references: [id])
-  operator User    @relation(fields: [operatorId], references: [id])
+  machine  Machine  @relation(fields: [machineId], references: [id])
+  operator User     @relation(fields: [operatorId], references: [id])
   jobSite  JobSite? @relation(fields: [jobSiteId], references: [id])
 
   @@index([machineId])
   @@index([operatorId])
   @@index([status])
+  @@index([jobSiteId, status])
 }
 
 model FuelLog {
@@ -250,10 +256,10 @@ model FuelLog {
   machineId    String
   operatorId   String
   jobSiteId    String?
-  litres       Float
-  costPerLitre Float?
-  totalCost    Float?
-  meterReading Float?
+  litres       Decimal  @db.Decimal(10, 2)
+  costPerLitre Decimal? @db.Decimal(10, 2)
+  totalCost    Decimal? @db.Decimal(12, 2)
+  meterReading Decimal? @db.Decimal(10, 2)
   date         DateTime @default(now())
   receiptUrl   String?
   fuelStation  String?
@@ -266,6 +272,7 @@ model FuelLog {
 
   @@index([machineId])
   @@index([date])
+  @@index([machineId, date])
 }
 
 model MaintenanceRecord {
@@ -273,13 +280,13 @@ model MaintenanceRecord {
   machineId        String
   serviceType      MaintenanceType @default(SCHEDULED)
   description      String?
-  meterReading     Float?
+  meterReading     Decimal?        @db.Decimal(10, 2)
   serviceDate      DateTime        @default(now())
-  nextServiceHours Float?
+  nextServiceHours Decimal?        @db.Decimal(10, 2)
   nextServiceDate  DateTime?
-  partsCost        Float?          @default(0)
-  laborCost        Float?          @default(0)
-  totalCost        Float?          @default(0)
+  partsCost        Decimal         @default(0) @db.Decimal(12, 2)
+  laborCost        Decimal         @default(0) @db.Decimal(12, 2)
+  totalCost        Decimal         @default(0) @db.Decimal(12, 2)
   serviceProvider  String?
   receiptUrl       String?
   notes            String?
@@ -288,6 +295,7 @@ model MaintenanceRecord {
   machine Machine @relation(fields: [machineId], references: [id])
 
   @@index([machineId])
+  @@index([serviceDate])
 }
 
 model BreakdownReport {
@@ -315,12 +323,14 @@ model BreakdownReport {
 model Expense {
   id          String          @id @default(cuid())
   category    ExpenseCategory
-  amount      Float
+  amount      Decimal         @db.Decimal(12, 2)
   machineId   String?
   jobSiteId   String?
   description String?
   date        DateTime        @default(now())
   receiptUrl  String?
+  source      String?       // e.g. MANUAL, FUEL_LOG, MAINTENANCE — for reconciliation
+  referenceId String?     // optional link to originating FuelLog/MaintenanceRecord
   createdById String?
   createdAt   DateTime        @default(now())
 
@@ -330,6 +340,7 @@ model Expense {
 
   @@index([category])
   @@index([date])
+  @@index([jobSiteId, date])
 }
 
 model Revenue {
@@ -337,15 +348,38 @@ model Revenue {
   jobSiteId       String?
   machineId       String?
   invoiceNumber   String        @unique
-  amount          Float
-  amountReceived  Float         @default(0)
+  amount          Decimal       @db.Decimal(14, 2)
+  amountReceived  Decimal       @default(0) @db.Decimal(14, 2)
   paymentStatus   PaymentStatus @default(PENDING)
   billingStart    DateTime?
   billingEnd      DateTime?
   clientName      String?
   notes           String?
+  source          String?       // e.g. MANUAL, SITE_BILLING
+  referenceId     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   jobSite JobSite? @relation(fields: [jobSiteId], references: [id])
+  machine Machine? @relation(fields: [machineId], references: [id])
+
+  @@index([paymentStatus])
+}
+
+/// Append-only trail for sensitive changes (financial entries, machine state
+/// changes, operator lifecycle). Written via src/lib/audit.ts.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  actorRole String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@index([action])
 }

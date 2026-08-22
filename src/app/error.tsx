@@ -1,10 +1,15 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/logo";
 import { AlertTriangle } from "lucide-react";
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const { data: session } = useSession();
+  const role = (session?.user as unknown as { role?: string } | undefined)?.role;
+  const homeHref = role === "OWNER" || role === "ADMIN" ? "/admin/dashboard" : role === "OPERATOR" ? "/operator/today" : "/login";
+  const homeLabel = role === "OWNER" || role === "ADMIN" ? "Go to dashboard" : role === "OPERATOR" ? "Go to operator app" : "Go to login";
   useEffect(() => {
     console.error("App error:", error);
   }, [error]);
@@ -20,7 +25,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
       {error.digest && <p className="font-mono text-xs text-muted-foreground">Ref: {error.digest}</p>}
       <div className="flex gap-2">
         <Button onClick={reset} size="lg">Try again</Button>
-        <Button variant="outline" size="lg" asChild><a href="/operator/today">Go home</a></Button>
+        <Button variant="outline" size="lg" asChild><a href={homeHref}>{homeLabel}</a></Button>
       </div>
     </main>
   );

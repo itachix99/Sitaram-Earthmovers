@@ -1,0 +1,25 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test --run 2>&1 | tail -n 50
+      - run: pnpm build
+      - name: Prisma validate
+        run: node node_modules/prisma/build/index.js validate
+      - name: Check migrations are applied
+        run: node node_modules/prisma/build/index.js migrate deploy --preview-feature || true

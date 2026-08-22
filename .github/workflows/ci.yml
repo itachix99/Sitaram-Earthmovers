@@ -5,6 +5,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+      AUTH_SECRET: ci-dummy-secret-32chars-minimum-for-build
+      NEXTAUTH_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

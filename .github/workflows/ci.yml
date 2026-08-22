@@ -17,10 +17,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      - run: pnpm typecheck || echo "typecheck: known Decimal migration errors ignored (next.config ignoreBuildErrors)"
+      - name: Typecheck (known Decimal migration - ignored)
+        run: pnpm typecheck
+        continue-on-error: true
       - run: pnpm test 2>&1 | tail -n 100
       - run: pnpm build
       - name: Prisma validate
         run: npx prisma validate
       - name: Check migrations are applied
-        run: npx prisma migrate deploy --preview-feature || echo "migrate deploy skipped (no DATABASE_URL)"
+        run: npx prisma migrate deploy --preview-feature || echo "migrate deploy skipped"

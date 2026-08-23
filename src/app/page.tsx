@@ -26,13 +26,9 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-4 md:px-6 py-10 md:py-20 overflow-x-clip">
-        <div className="grid gap-10 md:grid-cols-2 items-center">
+        <div className="grid gap-10 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs font-semibold tracking-widest uppercase">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Machinery Management Platform — Live
-            </div>
-            <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[0.95] break-words">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[0.95] break-words">
               Powering <span className="underline decoration-[var(--sitaram-yellow)] decoration-8 underline-offset-2">Every Move</span>
             </h1>
             <p className="mt-4 text-lg text-muted-foreground leading-relaxed">

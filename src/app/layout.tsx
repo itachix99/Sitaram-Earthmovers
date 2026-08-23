@@ -16,6 +16,7 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  maximumScale: 5,
   viewportFit: "cover",
 };
 
@@ -49,7 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full max-w-full overflow-x-clip flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
           <ThemedToaster />

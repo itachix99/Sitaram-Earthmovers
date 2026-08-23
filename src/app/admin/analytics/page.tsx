@@ -78,7 +78,7 @@ export default async function AnalyticsPage() {
   const anomalies = machineStats.filter(m=>m.fuelStatus==="danger" || m.utilization<10 || (m.costPerHour!==null && m.costPerHour>2000));
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <div><h1 className="text-2xl font-bold tracking-tight">Analytics</h1><p className="text-sm text-muted-foreground">Utilization, fuel, cost/hour, profitability — last 30 days • Estimated where noted</p></div>
 
       <div className="grid gap-4 md:grid-cols-3">

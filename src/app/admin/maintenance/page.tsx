@@ -23,7 +23,7 @@ export default async function MaintenancePage() {
   const overdue = alerts.filter(a=>a.state==="overdue");
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <div><h1 className="text-2xl font-bold tracking-tight">Maintenance</h1><p className="text-sm text-muted-foreground">Hour-based & date-based service • {machines.length} machines • {records.length} records shown</p></div>
 
       {(overdue.length>0 || approaching.length>0) && (

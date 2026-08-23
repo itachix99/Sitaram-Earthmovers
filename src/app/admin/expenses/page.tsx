@@ -23,7 +23,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const profit = totalRevenue - totalExpense;
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <div><h1 className="text-2xl font-bold tracking-tight">Expenses & Revenue</h1><p className="text-sm text-muted-foreground">Profitability • {expenses.length} expenses shown • Revenue estimated</p></div>
 
       <div className="grid gap-4 md:grid-cols-3">

@@ -82,27 +82,27 @@ export default async function DashboardPage() {
   const avgRate = todaySessionsForRevenue.length ? Math.round(estRevenue / Math.max(0.1, todayHours)) : 1800;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
+      <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4 min-w-0">
         <div><h1 className="text-2xl font-bold tracking-tight">Dashboard</h1><p className="text-sm text-muted-foreground">Good morning — live from Sitaram fleet • {new Date().toLocaleDateString("en-IN")}</p></div>
         <div className="flex gap-2"><Button variant="outline" asChild><Link href="/admin/reports">Export Report</Link></Button><Button asChild><Link href="/admin/machines">Add Machine</Link></Button></div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 min-w-0">
         <StatCard label="Total Machines" value={totalMachines} sub={`${active} active • ${working} working`} icon={Truck} />
         <StatCard label="Working Now" value={working} sub={`${totalMachines?Math.round(working/totalMachines*100):0}% utilization • ${idle} idle`} icon={Clock3} variant="yellow" />
         <StatCard label="Fuel Today" value={`${fuelLitres.toFixed(0)} L`} sub={`₹${fuelCost.toLocaleString("en-IN")} • ${todayHours? (fuelLitres/todayHours).toFixed(1):"—"} L/hr`} icon={Fuel} />
         <StatCard label="Revenue (Today)" value={`₹${(estRevenue/1000).toFixed(1)}k`} sub={`${usedFallback ? "~" : ""}₹${avgRate}/hr avg • ${todayHours.toFixed(1)}h • from site rates`} icon={IndianRupee} variant="charcoal" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-3 min-w-0">
         <StatCard label="Active Sites" value={sites} sub={`${sites} sites • ${working} machines deployed`} icon={MapPinned} />
         <StatCard label="Operators Active" value={`${operators}`} sub={`${operators} active`} icon={Users} />
         <StatCard label="Open Issues" value={breakdownsOpen} sub={`${approaching} approaching • ${overdue} overdue maintenance`} icon={AlertTriangle} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2 min-w-0 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between"><CardTitle>Fleet Status — Live</CardTitle><Button variant="ghost" size="sm" asChild><Link href="/admin/machines">View all</Link></Button></CardHeader>
           <CardContent className="space-y-3">
             {machines.map((m)=>(

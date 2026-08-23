@@ -140,3 +140,17 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* === Mobile viewport hard-fix: prevent any element from forcing horizontal scroll/zoom === */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }
+}
+img, video, canvas, svg {
+  max-width: 100%;
+}
+/* Ensure flex/grid children can shrink — prevents Recharts/Tables from expanding viewport */
+.min-w-0 { min-width: 0; }

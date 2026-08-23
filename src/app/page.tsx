@@ -7,32 +7,32 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen max-w-full overflow-x-clip bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur">
-        <div className="mx-auto flex h-[64px] max-w-6xl items-center justify-between px-6">
+        <div className="mx-auto flex h-[64px] max-w-6xl items-center justify-between gap-2 px-4 md:px-6 min-w-0">
           <Logo />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <ThemeToggle />
-            <Button variant="ghost" asChild>
+            <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button asChild>
-              <Link href="/admin/dashboard">Open Dashboard</Link>
+            <Button size="sm" className="px-3 sm:px-5" asChild>
+              <Link href="/admin/dashboard"><span className="hidden sm:inline">Open Dashboard</span><span className="sm:hidden">Dashboard</span></Link>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 py-14 md:py-20">
+      <section className="mx-auto max-w-6xl px-4 md:px-6 py-10 md:py-20 overflow-x-clip">
         <div className="grid gap-10 md:grid-cols-2 items-center">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs font-semibold tracking-widest uppercase">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               Machinery Management Platform — Live
             </div>
-            <h1 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight leading-[0.95]">
+            <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[0.95] break-words">
               Powering <span className="underline decoration-[var(--sitaram-yellow)] decoration-8 underline-offset-2">Every Move</span>
             </h1>
             <p className="mt-4 text-lg text-muted-foreground leading-relaxed">
@@ -58,7 +58,7 @@ export default function HomePage() {
           </div>
 
           {/* Industrial preview card */}
-          <Card className="overflow-hidden border-[var(--charcoal)]/10">
+          <Card className="overflow-hidden border-[var(--charcoal)]/10 min-w-0">
             <div className="bg-[var(--charcoal)] px-6 py-4 text-white flex items-center justify-between">
               <div>
                 <p className="text-xs tracking-widest uppercase text-white/60">Today&apos;s Fleet Status</p>
@@ -68,7 +68,7 @@ export default function HomePage() {
                 <Truck className="h-5 w-5" />
               </div>
             </div>
-            <CardContent className="grid grid-cols-3 gap-4 p-6">
+            <CardContent className="grid grid-cols-3 gap-2 sm:gap-4 p-4 sm:p-6 min-w-0">
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center">
                 <p className="text-2xl font-bold text-emerald-700">7</p>
                 <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700/70">Working</p>
@@ -93,7 +93,7 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="mx-auto max-w-6xl px-6 pb-16">
+      <section className="mx-auto max-w-6xl px-4 md:px-6 pb-16 overflow-x-clip">
         <div className="grid gap-4 md:grid-cols-4">
           {[
             { icon: Truck, title: "Machinery", desc: "JCBs, excavators, tippers, cranes with hour-meter history" },

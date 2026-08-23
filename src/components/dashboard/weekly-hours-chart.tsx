@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 
 export function WeeklyHoursChart({ data }: { data: { day: string; hours: number }[] }) {
   return (
-    <div className="h-[180px] w-full">
+    <div className="h-[180px] w-full min-w-0 max-w-full overflow-hidden">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

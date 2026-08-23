@@ -10,8 +10,8 @@ import { Logo } from "@/components/brand/logo";
 export function AdminTopbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-30 flex h-[64px] items-center gap-4 border-b bg-card px-4 md:px-6">
-      <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
+    <header className="sticky top-0 z-30 flex h-[64px] w-full max-w-full min-w-0 items-center gap-2 sm:gap-4 overflow-x-clip border-b bg-card px-3 sm:px-4 md:px-6">
+      <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setMobileOpen(!mobileOpen)}>
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
@@ -22,11 +22,11 @@ export function AdminTopbar() {
         </div>
       </div>
 
-      <div className="flex flex-1 items-center justify-between md:justify-end gap-3">
-        <div className="md:hidden">
+      <div className="flex flex-1 min-w-0 items-center justify-between md:justify-end gap-2 sm:gap-3">
+        <div className="md:hidden min-w-0 shrink-0">
           <Logo />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <span className="hidden sm:inline-flex items-center gap-2 text-xs text-muted-foreground">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             System operational

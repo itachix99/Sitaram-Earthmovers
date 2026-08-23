@@ -31,13 +31,13 @@ export default async function OperatorsPage({ searchParams }: { searchParams: Pr
   const assignMap = new Map(assignments.map(a=> [a.operatorId, a]));
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><h1 className="text-2xl font-bold tracking-tight">Operators</h1><p className="text-sm text-muted-foreground">{total} operators • {operators.length} shown • User+Operator linked</p></div>
         <Button asChild><Link href="/admin/operators/new"><Plus className="h-4 w-4" /> Add Operator</Link></Button>
       </div>
       <Card><CardContent className="p-4">
-        <form method="GET" className="flex gap-3">
+        <form method="GET" className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-md"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input name="q" defaultValue={query} placeholder="Search name, phone, license..." className="pl-9" /></div>
           <Button type="submit" variant="outline">Search</Button>
           {query && <Button variant="ghost" asChild><Link href="/admin/operators">Clear</Link></Button>}

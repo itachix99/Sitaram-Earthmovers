@@ -21,11 +21,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const countMap = new Map(assignments.map(a=>[a.jobSiteId, a._count.jobSiteId]));
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <div className="flex flex-wrap justify-between items-start gap-4"><div><h1 className="text-2xl font-bold tracking-tight">Job Sites / Projects</h1><p className="text-sm text-muted-foreground">{total} sites • {sites.length} shown • Assignments preserved</p></div><Button asChild><Link href="/admin/projects/new"><Plus className="h-4 w-4" /> Add Site</Link></Button></div>
 
       <Card><CardContent className="p-4">
-        <form method="GET" className="flex flex-wrap gap-3">
+        <form method="GET" className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
           <div className="relative flex-1 min-w-[220px]"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input name="q" defaultValue={query} placeholder="Search site, client, address..." className="pl-9" /></div>
           <select name="status" defaultValue={status ?? ""} className="h-10 rounded-md border border-input bg-card px-3 text-sm"><option value="">All Status</option><option value="ACTIVE">Active</option><option value="ON_HOLD">On Hold</option><option value="COMPLETED">Completed</option></select>
           <Button type="submit" variant="outline">Filter</Button>

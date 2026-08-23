@@ -134,7 +134,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <div className="flex flex-wrap justify-between gap-4">
         <div><h1 className="text-2xl font-bold tracking-tight">Reports</h1><p className="text-sm text-muted-foreground">Filtered reports — export as CSV, Excel or PDF</p></div>
         <ExportButtons type={type} query={base} />

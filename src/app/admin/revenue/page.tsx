@@ -23,7 +23,7 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
   const pending = total - received;
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <div><h1 className="text-2xl font-bold tracking-tight">Revenue</h1><p className="text-sm text-muted-foreground">Invoices • {revenues.length} shown • Pending ₹{pending.toLocaleString("en-IN")}</p></div>
 
       <div className="grid gap-4 md:grid-cols-3">

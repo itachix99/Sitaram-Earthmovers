@@ -38,7 +38,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid md:grid-cols-2">
+    <div className="min-h-screen max-w-full overflow-x-clip grid md:grid-cols-2">
       <div className="hidden md:flex flex-col justify-between bg-[var(--charcoal)] text-white p-10 relative overflow-hidden">
         {/* charcoal pane is always dark — no toggle needed here */}
         <div>
@@ -70,7 +70,7 @@ export default function LoginPage() {
         <div className="absolute -right-20 -bottom-20 h-80 w-80 rounded-full bg-[var(--sitaram-yellow)]/10 blur-3xl" />
       </div>
 
-      <div className="flex flex-col justify-center px-6 py-10 bg-background relative">
+      <div className="flex min-w-0 max-w-full flex-col justify-center overflow-x-clip px-4 sm:px-6 py-10 bg-background relative">
         <div className="absolute right-4 top-4">
           <ThemeToggle />
         </div>

@@ -15,7 +15,7 @@ export default async function BreakdownsPage({ searchParams }: { searchParams: P
   const inProgressCount = await prisma.breakdownReport.count({ where: { status: "IN_PROGRESS" } });
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <div className="flex flex-wrap justify-between gap-4"><div><h1 className="text-2xl font-bold tracking-tight">Breakdowns</h1><p className="text-sm text-muted-foreground">{reports.length} reports • {openCount} open • {inProgressCount} in progress</p></div></div>
 
       <div className="flex gap-2">
